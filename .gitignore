@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# scratch / temp
+_*.html
+_*.svg
+_gen_*
+*.tmp
+
+# OS
+Thumbs.db
+.DS_Store

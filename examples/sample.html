@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>sample</title>
+<style>
+  :root{ --bg:#1e1e1e; --bar:#252526; --line:#3a3a3a; --accent:#64b5f6; --hot:#ffd54f; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:var(--bg); color:#ddd; font-family:'Segoe UI',Arial,sans-serif; overflow:hidden; }
+  #bar{ position:fixed; top:0; left:0; right:0; height:46px; display:flex; gap:8px; align-items:center; padding:0 12px; background:var(--bar); border-bottom:1px solid var(--line); z-index:10; font-size:13px; }
+  #bar input[type=search]{ background:#1b1b1b; border:1px solid var(--line); color:#ddd; border-radius:6px; padding:5px 9px; width:230px; outline:none; }
+  #bar button{ background:#333; border:1px solid var(--line); color:#ddd; border-radius:6px; padding:5px 10px; cursor:pointer; }
+  #bar button:hover{ background:#3d3d3d; }
+  #bar label{ display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
+  #bar .sep{ flex:1; }
+  #hint{ color:#888; font-size:12px; }
+  #stage{ position:absolute; top:46px; left:0; right:280px; bottom:0; overflow:auto; }
+  #side{ position:absolute; top:46px; right:0; bottom:0; width:280px; background:var(--bar); border-left:1px solid var(--line); overflow:auto; padding:12px; font-size:13px; }
+  #side h3{ margin:0 0 6px; font-size:14px; color:#fff; word-break:break-all; }
+  #side .meta{ color:#888; font-size:12px; margin-bottom:10px; }
+  #side .grp{ color:var(--hot); font-size:11px; text-transform:uppercase; letter-spacing:.5px; margin:12px 0 4px; }
+  #side a{ display:block; padding:4px 7px; border-radius:5px; color:#cfe3ff; text-decoration:none; cursor:pointer; }
+  #side a:hover{ background:#333; }
+  #side a small{ color:#888; }
+  svg{ display:block; }
+  g.relationship{ transition:opacity .12s; }
+  g.relationship.dim{ opacity:.045; }
+  g.relationship.hot .relation-line{ stroke:var(--hot)!important; stroke-opacity:1!important; stroke-width:3.5!important; }
+  g.table{ transition:opacity .12s; }
+  g.table.dim{ opacity:.16; }
+  g.table.sel .table-bg{ stroke:var(--hot)!important; stroke-width:3.5!important; }
+  body.edit g.table{ cursor:move; }
+  body.edit g.table .column{ pointer-events:none; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <strong style="color:#fff">sample</strong>
+  <input id="find" type="search" placeholder="find table…" autocomplete="off">
+  <button id="zin">+</button><button id="zout">&minus;</button><button id="fit">Fit</button>
+  <button id="reset">Clear</button>
+  <label><input type="checkbox" id="edit"> Edit</label>
+  <button id="save">Export SVG</button>
+  <span class="sep"></span>
+  <span id="hint">click a table to highlight its relationships</span>
+</div>
+<div id="stage">
+  <svg id="svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1746 1680" width="1746" height="1680">
+  <defs>
+    <style>
+      .table-header { font-family: 'Segoe UI','SF Pro Display',Arial,sans-serif; font-size:13px; font-weight:600; fill:white; }
+      .column-name { font-family: 'Segoe UI','SF Pro Display',Arial,sans-serif; font-size:11px; fill:#e0e0e0; }
+      .column-type { font-family: 'Segoe UI','SF Pro Display',Arial,sans-serif; font-size:10px; fill:#888; }
+      .pk-icon { font-family:'Segoe UI',Arial,sans-serif; font-size:9px; fill:#ffd700; font-weight:bold; }
+      .fk-icon { font-family:'Segoe UI',Arial,sans-serif; font-size:9px; fill:#64b5f6; font-weight:bold; }
+      .relation-line { stroke-width:2; fill:none; }
+      .cardinality-label { font-family:'Segoe UI',Arial,sans-serif; font-size:14px; font-weight:bold; }
+      .draggable { cursor:move; }
+    </style>
+    <marker id="arrow-end" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,6 L0,12 L3,6 Z" fill="#64b5f6"/></marker>
+    <marker id="one-circle" markerWidth="16" markerHeight="16" refX="8" refY="8" orient="auto" markerUnits="userSpaceOnUse"><circle cx="8" cy="8" r="5" fill="none" stroke="#64b5f6" stroke-width="2"/></marker>
+    <marker id="many-crow" markerWidth="20" markerHeight="20" refX="18" refY="10" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,10 L18,2 M0,10 L18,10 M0,10 L18,18" stroke="#64b5f6" stroke-width="2" fill="none" stroke-linecap="round"/></marker>
+    <marker id="one-line" markerWidth="16" markerHeight="20" refX="14" refY="10" orient="auto" markerUnits="userSpaceOnUse"><line x1="4" y1="2" x2="4" y2="18" stroke="#64b5f6" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="2" x2="12" y2="18" stroke="#64b5f6" stroke-width="2.5" stroke-linecap="round"/></marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/></filter>
+  </defs>
+    <rect width="100%" height="100%" fill="#1e1e1e"/>
+    <g class="relationships-layer"></g>
+    <g class="tables-layer">
+      <g class="table draggable" data-table="users" transform="translate(597,80)">
+        <rect class="table-bg" x="0" y="0" width="240" height="162" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">users</text>
+        <g class="column" data-table="users" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="users" data-column="email">
+          <text x="14" y="87" class="column-name">email</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="users" data-column="display_name">
+          <text x="14" y="113" class="column-name">display_name</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="users" data-column="created_at">
+          <text x="14" y="139" class="column-name">created_at</text>
+          <text x="230" y="139" text-anchor="end" class="column-type">datetime</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="profiles" transform="translate(970,209)">
+        <rect class="table-bg" x="0" y="0" width="240" height="162" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">profiles</text>
+        <g class="column" data-table="profiles" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="profiles" data-column="user_id">
+          <text x="10" y="87" class="fk-icon">&#128279;</text>
+          <text x="28" y="87" class="column-name">user_id</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="profiles" data-column="bio">
+          <text x="14" y="113" class="column-name">bio</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="profiles" data-column="avatar_url">
+          <text x="14" y="139" class="column-name">avatar_url</text>
+          <text x="230" y="139" text-anchor="end" class="column-type">varchar</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="addresses" transform="translate(739,432)">
+        <rect class="table-bg" x="0" y="0" width="240" height="214" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">addresses</text>
+        <g class="column" data-table="addresses" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="addresses" data-column="user_id">
+          <text x="10" y="87" class="fk-icon">&#128279;</text>
+          <text x="28" y="87" class="column-name">user_id</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="addresses" data-column="line1">
+          <text x="14" y="113" class="column-name">line1</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="addresses" data-column="city">
+          <text x="14" y="139" class="column-name">city</text>
+          <text x="230" y="139" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="addresses" data-column="country">
+          <text x="14" y="165" class="column-name">country</text>
+          <text x="230" y="165" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="177" x2="232" y2="177" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="176" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="addresses" data-column="postcode">
+          <text x="14" y="191" class="column-name">postcode</text>
+          <text x="230" y="191" text-anchor="end" class="column-type">varchar</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="categories" transform="translate(401,803)">
+        <rect class="table-bg" x="0" y="0" width="240" height="162" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">categories</text>
+        <g class="column" data-table="categories" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="categories" data-column="parent_id">
+          <text x="10" y="87" class="fk-icon">&#128279;</text>
+          <text x="28" y="87" class="column-name">parent_id</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="categories" data-column="name">
+          <text x="14" y="113" class="column-name">name</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="categories" data-column="slug">
+          <text x="14" y="139" class="column-name">slug</text>
+          <text x="230" y="139" text-anchor="end" class="column-type">varchar</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="products" transform="translate(80,643)">
+        <rect class="table-bg" x="0" y="0" width="240" height="240" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">products</text>
+        <g class="column" data-table="products" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="products" data-column="category_id">
+          <text x="10" y="87" class="fk-icon">&#128279;</text>
+          <text x="28" y="87" class="column-name">category_id</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="products" data-column="sku">
+          <text x="14" y="113" class="column-name">sku</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="products" data-column="title">
+          <text x="14" y="139" class="column-name">title</text>
+          <text x="230" y="139" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="products" data-column="price">
+          <text x="14" y="165" class="column-name">price</text>
+          <text x="230" y="165" text-anchor="end" class="column-type">decimal</text>
+        </g>
+        <line x1="8" y1="177" x2="232" y2="177" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="176" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="products" data-column="weight">
+          <text x="14" y="191" class="column-name">weight</text>
+          <text x="230" y="191" text-anchor="end" class="column-type">float</text>
+        </g>
+        <line x1="8" y1="203" x2="232" y2="203" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="products" data-column="created_at">
+          <text x="14" y="217" class="column-name">created_at</text>
+          <text x="230" y="217" text-anchor="end" class="column-type">datetime</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="tags" transform="translate(204,119)">
+        <rect class="table-bg" x="0" y="0" width="240" height="110" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">tags</text>
+        <g class="column" data-table="tags" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="tags" data-column="name">
+          <text x="14" y="87" class="column-name">name</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">varchar</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="product_tags" transform="translate(582,282)">
+        <rect class="table-bg" x="0" y="0" width="240" height="110" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">product_tags</text>
+        <g class="column" data-table="product_tags" data-column="product_id">
+          <text x="10" y="61" class="fk-icon">&#128279;</text>
+          <text x="28" y="61" class="column-name">product_id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="product_tags" data-column="tag_id">
+          <text x="10" y="87" class="fk-icon">&#128279;</text>
+          <text x="28" y="87" class="column-name">tag_id</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="orders" transform="translate(400,523)">
+        <rect class="table-bg" x="0" y="0" width="240" height="240" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">orders</text>
+        <g class="column" data-table="orders" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="orders" data-column="user_id">
+          <text x="10" y="87" class="fk-icon">&#128279;</text>
+          <text x="28" y="87" class="column-name">user_id</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="orders" data-column="shipping_address_id">
+          <text x="10" y="113" class="fk-icon">&#128279;</text>
+          <text x="28" y="113" class="column-name">shipping_address_id</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="orders" data-column="billing_address_id">
+          <text x="10" y="139" class="fk-icon">&#128279;</text>
+          <text x="28" y="139" class="column-name">billing_address_id</text>
+          <text x="230" y="139" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="orders" data-column="status">
+          <text x="14" y="165" class="column-name">status</text>
+          <text x="230" y="165" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="177" x2="232" y2="177" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="176" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="orders" data-column="total">
+          <text x="14" y="191" class="column-name">total</text>
+          <text x="230" y="191" text-anchor="end" class="column-type">decimal</text>
+        </g>
+        <line x1="8" y1="203" x2="232" y2="203" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="orders" data-column="placed_at">
+          <text x="14" y="217" class="column-name">placed_at</text>
+          <text x="230" y="217" text-anchor="end" class="column-type">datetime</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="order_items" transform="translate(728,914)">
+        <rect class="table-bg" x="0" y="0" width="240" height="188" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">order_items</text>
+        <g class="column" data-table="order_items" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="order_items" data-column="order_id">
+          <text x="10" y="87" class="fk-icon">&#128279;</text>
+          <text x="28" y="87" class="column-name">order_id</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="order_items" data-column="product_id">
+          <text x="10" y="113" class="fk-icon">&#128279;</text>
+          <text x="28" y="113" class="column-name">product_id</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="order_items" data-column="quantity">
+          <text x="14" y="139" class="column-name">quantity</text>
+          <text x="230" y="139" text-anchor="end" class="column-type">int</text>
+        </g>
+        <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="order_items" data-column="unit_price">
+          <text x="14" y="165" class="column-name">unit_price</text>
+          <text x="230" y="165" text-anchor="end" class="column-type">decimal</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="payments" transform="translate(778,686)">
+        <rect class="table-bg" x="0" y="0" width="240" height="188" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">payments</text>
+        <g class="column" data-table="payments" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="payments" data-column="order_id">
+          <text x="10" y="87" class="fk-icon">&#128279;</text>
+          <text x="28" y="87" class="column-name">order_id</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="payments" data-column="method">
+          <text x="14" y="113" class="column-name">method</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="payments" data-column="amount">
+          <text x="14" y="139" class="column-name">amount</text>
+          <text x="230" y="139" text-anchor="end" class="column-type">decimal</text>
+        </g>
+        <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="payments" data-column="paid_at">
+          <text x="14" y="165" class="column-name">paid_at</text>
+          <text x="230" y="165" text-anchor="end" class="column-type">datetime</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="carriers" transform="translate(1425,468)">
+        <rect class="table-bg" x="0" y="0" width="240" height="136" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">carriers</text>
+        <g class="column" data-table="carriers" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="carriers" data-column="name">
+          <text x="14" y="87" class="column-name">name</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="carriers" data-column="tracking_url">
+          <text x="14" y="113" class="column-name">tracking_url</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="shipments" transform="translate(1059,411)">
+        <rect class="table-bg" x="0" y="0" width="240" height="188" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">shipments</text>
+        <g class="column" data-table="shipments" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="shipments" data-column="order_id">
+          <text x="10" y="87" class="fk-icon">&#128279;</text>
+          <text x="28" y="87" class="column-name">order_id</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="shipments" data-column="carrier_id">
+          <text x="10" y="113" class="fk-icon">&#128279;</text>
+          <text x="28" y="113" class="column-name">carrier_id</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="shipments" data-column="tracking_no">
+          <text x="14" y="139" class="column-name">tracking_no</text>
+          <text x="230" y="139" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="shipments" data-column="shipped_at">
+          <text x="14" y="165" class="column-name">shipped_at</text>
+          <text x="230" y="165" text-anchor="end" class="column-type">datetime</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="reviews" transform="translate(262,269)">
+        <rect class="table-bg" x="0" y="0" width="240" height="214" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">reviews</text>
+        <g class="column" data-table="reviews" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="reviews" data-column="product_id">
+          <text x="10" y="87" class="fk-icon">&#128279;</text>
+          <text x="28" y="87" class="column-name">product_id</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="reviews" data-column="user_id">
+          <text x="10" y="113" class="fk-icon">&#128279;</text>
+          <text x="28" y="113" class="column-name">user_id</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="reviews" data-column="rating">
+          <text x="14" y="139" class="column-name">rating</text>
+          <text x="230" y="139" text-anchor="end" class="column-type">int</text>
+        </g>
+        <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="reviews" data-column="body">
+          <text x="14" y="165" class="column-name">body</text>
+          <text x="230" y="165" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="177" x2="232" y2="177" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="176" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="reviews" data-column="created_at">
+          <text x="14" y="191" class="column-name">created_at</text>
+          <text x="230" y="191" text-anchor="end" class="column-type">datetime</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="warehouses" transform="translate(773,1142)">
+        <rect class="table-bg" x="0" y="0" width="240" height="136" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">warehouses</text>
+        <g class="column" data-table="warehouses" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="warehouses" data-column="name">
+          <text x="14" y="87" class="column-name">name</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="warehouses" data-column="region">
+          <text x="14" y="113" class="column-name">region</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="inventory" transform="translate(398,1005)">
+        <rect class="table-bg" x="0" y="0" width="240" height="188" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">inventory</text>
+        <g class="column" data-table="inventory" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="inventory" data-column="product_id">
+          <text x="10" y="87" class="fk-icon">&#128279;</text>
+          <text x="28" y="87" class="column-name">product_id</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="inventory" data-column="warehouse_id">
+          <text x="10" y="113" class="fk-icon">&#128279;</text>
+          <text x="28" y="113" class="column-name">warehouse_id</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="inventory" data-column="on_hand">
+          <text x="14" y="139" class="column-name">on_hand</text>
+          <text x="230" y="139" text-anchor="end" class="column-type">int</text>
+        </g>
+        <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="inventory" data-column="reserved">
+          <text x="14" y="165" class="column-name">reserved</text>
+          <text x="230" y="165" text-anchor="end" class="column-type">int</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="audit_log" transform="translate(80,1438)">
+        <rect class="table-bg" x="0" y="0" width="240" height="162" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">audit_log</text>
+        <g class="column" data-table="audit_log" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="audit_log" data-column="entity">
+          <text x="14" y="87" class="column-name">entity</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="audit_log" data-column="action">
+          <text x="14" y="113" class="column-name">action</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="audit_log" data-column="at">
+          <text x="14" y="139" class="column-name">at</text>
+          <text x="230" y="139" text-anchor="end" class="column-type">datetime</text>
+        </g>
+      </g>
+      <g class="table draggable" data-table="settings" transform="translate(400,1438)">
+        <rect class="table-bg" x="0" y="0" width="240" height="136" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
+        <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
+        <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
+        <text x="120" y="24" text-anchor="middle" class="table-header">settings</text>
+        <g class="column" data-table="settings" data-column="id">
+          <text x="10" y="61" class="pk-icon">PK</text>
+          <text x="30" y="61" class="column-name">id</text>
+          <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        </g>
+        <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+        <g class="column" data-table="settings" data-column="key">
+          <text x="14" y="87" class="column-name">key</text>
+          <text x="230" y="87" text-anchor="end" class="column-type">varchar</text>
+        </g>
+        <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <g class="column" data-table="settings" data-column="value">
+          <text x="14" y="113" class="column-name">value</text>
+          <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        </g>
+      </g>
+    </g>
+  </svg>
+</div>
+<div id="side">
+  <h3 id="s-title">Select a table</h3>
+  <div class="meta" id="s-meta">Hover or click a table to see its relationships.</div>
+  <div id="s-list"></div>
+</div>
+<script>
+const DATA = {"tables": [{"name": "users", "x": 597, "y": 80, "w": 240, "h": 162}, {"name": "profiles", "x": 970, "y": 209, "w": 240, "h": 162}, {"name": "addresses", "x": 739, "y": 432, "w": 240, "h": 214}, {"name": "categories", "x": 401, "y": 803, "w": 240, "h": 162}, {"name": "products", "x": 80, "y": 643, "w": 240, "h": 240}, {"name": "tags", "x": 204, "y": 119, "w": 240, "h": 110}, {"name": "product_tags", "x": 582, "y": 282, "w": 240, "h": 110}, {"name": "orders", "x": 400, "y": 523, "w": 240, "h": 240}, {"name": "order_items", "x": 728, "y": 914, "w": 240, "h": 188}, {"name": "payments", "x": 778, "y": 686, "w": 240, "h": 188}, {"name": "carriers", "x": 1425, "y": 468, "w": 240, "h": 136}, {"name": "shipments", "x": 1059, "y": 411, "w": 240, "h": 188}, {"name": "reviews", "x": 262, "y": 269, "w": 240, "h": 214}, {"name": "warehouses", "x": 773, "y": 1142, "w": 240, "h": 136}, {"name": "inventory", "x": 398, "y": 1005, "w": 240, "h": 188}, {"name": "audit_log", "x": 80, "y": 1438, "w": 240, "h": 162}, {"name": "settings", "x": 400, "y": 1438, "w": 240, "h": 136}], "rels": [{"f": "profiles", "t": "users", "foff": 87, "toff": 61, "fc": "1", "tc": "1", "fcol": "user_id", "tcol": "id"}, {"f": "addresses", "t": "users", "foff": 87, "toff": 61, "fc": "N", "tc": "1", "fcol": "user_id", "tcol": "id"}, {"f": "products", "t": "categories", "foff": 87, "toff": 61, "fc": "N", "tc": "1", "fcol": "category_id", "tcol": "id"}, {"f": "product_tags", "t": "products", "foff": 61, "toff": 61, "fc": "N", "tc": "1", "fcol": "product_id", "tcol": "id"}, {"f": "product_tags", "t": "tags", "foff": 87, "toff": 61, "fc": "N", "tc": "1", "fcol": "tag_id", "tcol": "id"}, {"f": "orders", "t": "users", "foff": 87, "toff": 61, "fc": "N", "tc": "1", "fcol": "user_id", "tcol": "id"}, {"f": "orders", "t": "addresses", "foff": 113, "toff": 61, "fc": "N", "tc": "1", "fcol": "shipping_address_id", "tcol": "id"}, {"f": "orders", "t": "addresses", "foff": 139, "toff": 61, "fc": "N", "tc": "1", "fcol": "billing_address_id", "tcol": "id"}, {"f": "order_items", "t": "orders", "foff": 87, "toff": 61, "fc": "N", "tc": "1", "fcol": "order_id", "tcol": "id"}, {"f": "order_items", "t": "products", "foff": 113, "toff": 61, "fc": "N", "tc": "1", "fcol": "product_id", "tcol": "id"}, {"f": "payments", "t": "orders", "foff": 87, "toff": 61, "fc": "N", "tc": "1", "fcol": "order_id", "tcol": "id"}, {"f": "shipments", "t": "orders", "foff": 87, "toff": 61, "fc": "N", "tc": "1", "fcol": "order_id", "tcol": "id"}, {"f": "shipments", "t": "carriers", "foff": 113, "toff": 61, "fc": "N", "tc": "1", "fcol": "carrier_id", "tcol": "id"}, {"f": "reviews", "t": "products", "foff": 87, "toff": 61, "fc": "N", "tc": "1", "fcol": "product_id", "tcol": "id"}, {"f": "reviews", "t": "users", "foff": 113, "toff": 61, "fc": "N", "tc": "1", "fcol": "user_id", "tcol": "id"}, {"f": "inventory", "t": "products", "foff": 87, "toff": 61, "fc": "N", "tc": "1", "fcol": "product_id", "tcol": "id"}, {"f": "inventory", "t": "warehouses", "foff": 113, "toff": 61, "fc": "N", "tc": "1", "fcol": "warehouse_id", "tcol": "id"}]};
+const SVGNS="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+const relsLayer=svg.querySelector('.relationships-layer');
+const stage=document.getElementById('stage');
+const VW=1746, VH=1680;
+const T={}; DATA.tables.forEach(t=>T[t.name]=Object.assign({},t));
+document.querySelectorAll('g.table').forEach(el=>{const n=el.getAttribute('data-table'); if(T[n]) T[n].el=el;});
+const ADJ={}; DATA.tables.forEach(t=>ADJ[t.name]=new Set());
+DATA.rels.forEach(r=>{ if(r.f!==r.t){ADJ[r.f].add(r.t); ADJ[r.t].add(r.f);}});
+function mk(card){ return card==='N' ? 'url(#many-crow)' : 'url(#one-line)'; }
+function route(r){
+  const f=T[r.f],t=T[r.t]; const fcx=f.x+f.w/2,tcx=t.x+t.w/2;
+  const fay=f.y+r.foff, tay=t.y+r.toff; let p0,p3,fr,el2;
+  if(tcx>=fcx){p0=[f.x+f.w,fay];p3=[t.x,tay];fr=true;el2=true;}
+  else{p0=[f.x,fay];p3=[t.x+t.w,tay];fr=false;el2=false;}
+  const co=Math.min(Math.max(Math.abs(p3[0]-p0[0])*0.5,45),160);
+  const c1=[fr?p0[0]+co:p0[0]-co,p0[1]], c2=[el2?p3[0]-co:p3[0]+co,p3[1]];
+  return {d:`M ${p0[0].toFixed(0)} ${p0[1].toFixed(0)} C ${c1[0].toFixed(0)} ${c1[1].toFixed(0)}, ${c2[0].toFixed(0)} ${c2[1].toFixed(0)}, ${p3[0].toFixed(0)} ${p3[1].toFixed(0)}`,
+    fbx:(fr?p0[0]+16:p0[0]-40),fby:p0[1]-24,ftx:(fr?p0[0]+28:p0[0]-28),fty:p0[1]-10,
+    tbx:(el2?p3[0]-40:p3[0]+16),tby:p3[1]-24,ttx:(el2?p3[0]-28:p3[0]+28),tty:p3[1]-10};
+}
+function el(tag,a){const e=document.createElementNS(SVGNS,tag);for(const k in a)e.setAttribute(k,a[k]);return e;}
+DATA.rels.forEach(r=>{
+  const g=el('g',{class:'relationship','data-from-table':r.f,'data-to-table':r.t});
+  const vis=el('path',{class:'relation-line',stroke:'#64b5f6','stroke-opacity':'0.6','stroke-width':'2',fill:'none','marker-start':mk(r.fc),'marker-end':mk(r.tc)});
+  const hit=el('path',{stroke:'transparent','stroke-width':'18',fill:'none'});
+  const fb=el('rect',{width:24,height:20,rx:4,fill:'#2a2a2a',stroke:'#64b5f6','stroke-width':1,opacity:.9});
+  const ft=el('text',{'text-anchor':'middle',class:'cardinality-label',fill:'#64b5f6'}); ft.textContent=r.fc;
+  const tb=el('rect',{width:24,height:20,rx:4,fill:'#2a2a2a',stroke:'#64b5f6','stroke-width':1,opacity:.9});
+  const tt=el('text',{'text-anchor':'middle',class:'cardinality-label',fill:'#64b5f6'}); tt.textContent=r.tc;
+  g.append(vis,hit,fb,ft,tb,tt); relsLayer.append(g); r._g={g,vis,hit,fb,ft,tb,tt};
+  g.addEventListener('mouseenter',()=>{if(!lock)hot(new Set([r.f,r.t]),x=>x===r);});
+  g.addEventListener('mouseleave',()=>{if(!lock)clear();});
+});
+function drawRel(r){const g=r._g,m=route(r); g.vis.setAttribute('d',m.d); g.hit.setAttribute('d',m.d);
+  g.fb.setAttribute('x',m.fbx);g.fb.setAttribute('y',m.fby);g.ft.setAttribute('x',m.ftx);g.ft.setAttribute('y',m.fty);
+  g.tb.setAttribute('x',m.tbx);g.tb.setAttribute('y',m.tby);g.tt.setAttribute('x',m.ttx);g.tt.setAttribute('y',m.tty);}
+DATA.rels.forEach(drawRel);
+let lock=null;
+function hot(nb,pred){
+  DATA.rels.forEach(r=>{const on=pred(r); r._g.g.classList.toggle('hot',on); r._g.g.classList.toggle('dim',!on); if(on)relsLayer.append(r._g.g);});
+  for(const n in T){const e=T[n].el; if(!e)continue; const keep=nb.has(n); e.classList.toggle('dim',!keep); e.classList.toggle('sel',lock===n);}
+}
+function highlight(name){const nb=new Set([name]); ADJ[name].forEach(k=>nb.add(k)); hot(nb,r=>r.f===name||r.t===name); panel(name);}
+function clear(){DATA.rels.forEach(r=>r._g.g.classList.remove('hot','dim')); for(const n in T){T[n].el&&T[n].el.classList.remove('dim','sel');} if(!lock)resetPanel();}
+document.querySelectorAll('g.table').forEach(e=>{const n=e.getAttribute('data-table');
+  e.addEventListener('mouseenter',()=>{if(!lock)highlight(n);});
+  e.addEventListener('mouseleave',()=>{if(!lock)clear();});
+  e.addEventListener('click',ev=>{if(dragMoved)return; ev.stopPropagation(); if(lock===n){lock=null;clear();}else{lock=n;highlight(n);}});});
+stage.addEventListener('click',()=>{if(lock){lock=null;clear();}});
+const sTitle=document.getElementById('s-title'),sMeta=document.getElementById('s-meta'),sList=document.getElementById('s-list');
+function resetPanel(){sTitle.textContent='Select a table'; sMeta.textContent='Hover or click a table to see its relationships.'; sList.innerHTML='';}
+function panel(name){
+  const out=[],inc=[];
+  DATA.rels.forEach(r=>{ if(r.f===name)out.push(r); else if(r.t===name)inc.push(r); });
+  sTitle.textContent=name; sMeta.textContent=`${ADJ[name].size} linked tables · ${out.length+inc.length} relationships`;
+  let h=''; const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const block=(title,arr,fn)=>{ if(!arr.length)return; h+=`<div class="grp">${title}</div>`;
+    arr.slice().sort((a,b)=>fn(a).g.localeCompare(fn(b).g)).forEach(r=>{const o=fn(r);
+      h+=`<a data-go="${esc(o.g)}">${esc(o.g)} <small>${o.card}</small><br><small>${esc(o.via)}</small></a>`;});};
+  block('References (N→1)', out, r=>({g:r.t,card:`${r.fc}→${r.tc}`,via:`${r.fcol} → ${r.t}.${r.tcol}`}));
+  block('Referenced by (1→N)', inc, r=>({g:r.f,card:`${r.fc}→${r.tc}`,via:`${r.f}.${r.fcol} → ${r.tcol}`}));
+  sList.innerHTML=h;
+  sList.querySelectorAll('a[data-go]').forEach(a=>a.addEventListener('click',ev=>{ev.stopPropagation(); const g=a.getAttribute('data-go'); lock=g; highlight(g); focusTable(g);}));
+}
+let zoom=1;
+function applyZoom(){svg.setAttribute('width',(VW*zoom).toFixed(0)); svg.setAttribute('height',(VH*zoom).toFixed(0));}
+function fit(){zoom=Math.max(Math.min(stage.clientWidth/VW,stage.clientHeight/VH)*0.98,0.05); applyZoom();}
+document.getElementById('zin').onclick=()=>{zoom=Math.min(zoom*1.25,4);applyZoom();};
+document.getElementById('zout').onclick=()=>{zoom=Math.max(zoom/1.25,0.05);applyZoom();};
+document.getElementById('fit').onclick=fit;
+document.getElementById('reset').onclick=()=>{lock=null;clear();};
+function focusTable(n){const t=T[n]; stage.scrollTo({left:(t.x+t.w/2)*zoom-stage.clientWidth/2, top:(t.y+t.h/2)*zoom-stage.clientHeight/2, behavior:'smooth'});}
+document.getElementById('find').addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase(); if(!q)return;
+  const hit=Object.keys(T).find(n=>n.toLowerCase().includes(q)); if(hit){lock=hit;highlight(hit);focusTable(hit);}});
+let editMode=false,dragMoved=false,drag=null;
+document.getElementById('edit').addEventListener('change',e=>{editMode=e.target.checked; document.body.classList.toggle('edit',editMode);});
+svg.addEventListener('pointerdown',e=>{if(!editMode)return; const g=e.target.closest('g.table'); if(!g)return;
+  const n=g.getAttribute('data-table'); drag={n,sx:e.clientX,sy:e.clientY,x0:T[n].x,y0:T[n].y}; dragMoved=false; g.setPointerCapture(e.pointerId); e.preventDefault();});
+svg.addEventListener('pointermove',e=>{if(!drag)return; const dx=(e.clientX-drag.sx)/zoom,dy=(e.clientY-drag.sy)/zoom;
+  if(Math.abs(dx)+Math.abs(dy)>2)dragMoved=true; const t=T[drag.n]; t.x=drag.x0+dx; t.y=drag.y0+dy;
+  t.el.setAttribute('transform',`translate(${t.x.toFixed(1)},${t.y.toFixed(1)})`);
+  DATA.rels.forEach(r=>{if(r.f===drag.n||r.t===drag.n)drawRel(r);});});
+svg.addEventListener('pointerup',()=>{drag=null; setTimeout(()=>dragMoved=false,0);});
+document.getElementById('save').onclick=()=>{lock=null;clear();
+  const s='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(svg);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'})); a.download='sample_untangled.svg'; a.click();};
+fit();
+</script>
+</body>
+</html>

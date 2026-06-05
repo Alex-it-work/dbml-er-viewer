@@ -1,0 +1,152 @@
+// Sample e-commerce schema for dbml-er-viewer
+// Demonstrates hubs (users, products, orders), self-reference,
+// one-to-one, inline refs and isolated tables.
+
+Table users {
+  id bigint [pk]
+  email varchar
+  display_name varchar
+  created_at datetime
+}
+
+Table profiles {
+  id bigint [pk]
+  user_id bigint
+  bio varchar
+  avatar_url varchar
+}
+
+Table addresses {
+  id bigint [pk]
+  user_id bigint
+  line1 varchar
+  city varchar
+  country varchar
+  postcode varchar
+}
+
+Table categories {
+  id bigint [pk]
+  parent_id bigint
+  name varchar
+  slug varchar
+}
+
+Table products {
+  id bigint [pk]
+  category_id bigint
+  sku varchar
+  title varchar
+  price decimal
+  weight float
+  created_at datetime
+}
+
+Table tags {
+  id bigint [pk]
+  name varchar
+}
+
+Table product_tags {
+  product_id bigint
+  tag_id bigint
+}
+
+Table orders {
+  id bigint [pk]
+  user_id bigint
+  shipping_address_id bigint
+  billing_address_id bigint
+  status varchar
+  total decimal
+  placed_at datetime
+}
+
+Table order_items {
+  id bigint [pk]
+  order_id bigint
+  product_id bigint
+  quantity int
+  unit_price decimal
+}
+
+Table payments {
+  id bigint [pk]
+  order_id bigint
+  method varchar
+  amount decimal
+  paid_at datetime
+}
+
+Table carriers {
+  id bigint [pk]
+  name varchar
+  tracking_url varchar
+}
+
+Table shipments {
+  id bigint [pk]
+  order_id bigint
+  carrier_id bigint
+  tracking_no varchar
+  shipped_at datetime
+}
+
+Table reviews {
+  id bigint [pk]
+  product_id bigint
+  user_id bigint
+  rating int
+  body varchar
+  created_at datetime
+}
+
+Table warehouses {
+  id bigint [pk]
+  name varchar
+  region varchar
+}
+
+Table inventory {
+  id bigint [pk]
+  product_id bigint
+  warehouse_id bigint
+  on_hand int
+  reserved int
+}
+
+// Isolated tables (no relationships) land in a tidy row of their own.
+Table audit_log {
+  id bigint [pk]
+  entity varchar
+  action varchar
+  at datetime
+}
+
+Table settings {
+  id bigint [pk]
+  key varchar
+  value varchar
+}
+
+// one-to-one
+Ref: profiles.user_id - users.id
+
+// many-to-one
+Ref: addresses.user_id > users.id
+Ref: products.category_id > categories.id
+Ref: categories.parent_id > categories.id
+Ref: product_tags.product_id > products.id
+Ref: product_tags.tag_id > tags.id
+Ref: orders.user_id > users.id
+Ref: orders.shipping_address_id > addresses.id
+Ref: orders.billing_address_id > addresses.id
+Ref: order_items.order_id > orders.id
+Ref: order_items.product_id > products.id
+Ref: payments.order_id > orders.id
+Ref: shipments.order_id > orders.id
+Ref: shipments.carrier_id > carriers.id
+Ref: reviews.product_id > products.id
+Ref: reviews.user_id > users.id
+Ref: inventory.product_id > products.id
+Ref: inventory.warehouse_id > warehouses.id
