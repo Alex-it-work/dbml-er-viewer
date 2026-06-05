@@ -25,17 +25,23 @@ This tool re-lays-out the schema from the source and ships a viewer where you ca
 - **Cardinality markers** — crow's-foot for *many*, bar for *one*; supports `>`, `<`, `-` (one-to-one) and `<>`.
 - **PK / FK badges** — primary keys get a gold `PK`; columns used in a relationship get a 🔗.
 
-## Requirements
+## Two ways to use it
 
-- **Python 3.8+** — standard library only, no dependencies, nothing to `pip install`.
+### 1. In the browser — no install, no Python
 
-## Usage
+Open **[`index.html`](index.html)** in any browser and **drag a `.dbml` file onto it** (or click *Open .dbml*). Parsing, layout and rendering all happen client-side in JavaScript — nothing is uploaded anywhere, nothing to install. It loads a sample on first open so you can try it immediately.
+
+> Tip: you can host `index.html` on GitHub Pages and share a link, or just keep the file locally and double-click it.
+
+### 2. From the command line — Python
+
+For batch use / CI. **Python 3.8+**, standard library only, nothing to `pip install`.
 
 ```bash
 python dbml_to_er.py schema.dbml
 ```
 
-This writes next to the input:
+writes next to the input:
 
 | file | what it is |
 |------|------------|
@@ -57,6 +63,8 @@ Try it on the bundled example:
 ```bash
 python dbml_to_er.py examples/sample.dbml --seeds 16
 ```
+
+Both paths share the same DBML parser and force-directed layout — the Python script and `index.html` are direct ports of each other.
 
 ## DBML support
 

@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DBML ER Viewer</title>
+<style>
+  :root{ --bg:#1e1e1e; --bar:#252526; --line:#3a3a3a; --accent:#64b5f6; --hot:#ffd54f; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:var(--bg); color:#ddd; font-family:'Segoe UI',Arial,sans-serif; overflow:hidden; }
+  #bar{ position:fixed; top:0; left:0; right:0; height:46px; display:flex; gap:8px; align-items:center; padding:0 12px; background:var(--bar); border-bottom:1px solid var(--line); z-index:10; font-size:13px; }
+  #bar input[type=search]{ background:#1b1b1b; border:1px solid var(--line); color:#ddd; border-radius:6px; padding:5px 9px; width:200px; outline:none; }
+  #bar button{ background:#333; border:1px solid var(--line); color:#ddd; border-radius:6px; padding:5px 10px; cursor:pointer; }
+  #bar button:hover{ background:#3d3d3d; }
+  #bar button.primary{ background:#2d5a86; border-color:#356; }
+  #bar label{ display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
+  #bar .sep{ flex:1; }
+  #hint{ color:#888; font-size:12px; }
+  #stage{ position:absolute; top:46px; left:0; right:280px; bottom:0; overflow:auto; }
+  #side{ position:absolute; top:46px; right:0; bottom:0; width:280px; background:var(--bar); border-left:1px solid var(--line); overflow:auto; padding:12px; font-size:13px; }
+  #side h3{ margin:0 0 6px; font-size:14px; color:#fff; word-break:break-all; }
+  #side .meta{ color:#888; font-size:12px; margin-bottom:10px; }
+  #side .grp{ color:var(--hot); font-size:11px; text-transform:uppercase; letter-spacing:.5px; margin:12px 0 4px; }
+  #side a{ display:block; padding:4px 7px; border-radius:5px; color:#cfe3ff; text-decoration:none; cursor:pointer; }
+  #side a:hover{ background:#333; }
+  #side a small{ color:#888; }
+  svg{ display:block; }
+  g.relationship{ transition:opacity .12s; }
+  g.relationship.dim{ opacity:.045; }
+  g.relationship.hot .relation-line{ stroke:var(--hot)!important; stroke-opacity:1!important; stroke-width:3.5!important; }
+  g.table{ transition:opacity .12s; }
+  g.table.dim{ opacity:.16; }
+  g.table.sel .table-bg{ stroke:var(--hot)!important; stroke-width:3.5!important; }
+  body.edit g.table{ cursor:move; }
+  body.edit g.table .column{ pointer-events:none; }
+  .table-header{ font-size:13px; font-weight:600; fill:#fff; }
+  .column-name{ font-size:11px; fill:#e0e0e0; }
+  .column-type{ font-size:10px; fill:#888; }
+  .pk-icon{ font-size:9px; fill:#ffd700; font-weight:bold; }
+  .fk-icon{ font-size:9px; fill:#64b5f6; font-weight:bold; }
+  .cardinality-label{ font-size:14px; font-weight:bold; }
+  /* overlays */
+  #drop{ position:absolute; inset:46px 280px 0 0; display:flex; align-items:center; justify-content:center; z-index:5; pointer-events:none; }
+  #drop .box{ border:2px dashed #4a4a4a; border-radius:14px; padding:40px 60px; text-align:center; color:#888; background:rgba(30,30,30,.6); }
+  #drop .box b{ color:#bbb; font-size:18px; }
+  body.dragover #drop .box{ border-color:var(--accent); color:#bbd; }
+  body.dragover #drop{ background:rgba(100,181,246,.06); }
+  #busy{ position:fixed; inset:0; background:rgba(20,20,20,.6); display:none; align-items:center; justify-content:center; z-index:20; color:#ddd; font-size:15px; }
+  #busy.on{ display:flex; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <strong style="color:#fff">DBML&nbsp;ER</strong>
+  <button id="open" class="primary">Open .dbml</button>
+  <button id="sample">Load sample</button>
+  <input id="file" type="file" accept=".dbml,.txt" style="display:none">
+  <input id="find" type="search" placeholder="find table…" autocomplete="off">
+  <button id="zin">+</button><button id="zout">&minus;</button><button id="fit">Fit</button>
+  <button id="reset">Clear</button>
+  <label><input type="checkbox" id="edit"> Edit</label>
+  <button id="save">Export SVG</button>
+  <span class="sep"></span>
+  <span id="hint">drag a .dbml file anywhere · click a table to highlight links</span>
+</div>
+
+<div id="stage">
+  <svg id="svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <defs>
+      <marker id="many-crow" markerWidth="20" markerHeight="20" refX="18" refY="10" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,10 L18,2 M0,10 L18,10 M0,10 L18,18" stroke="#64b5f6" stroke-width="2" fill="none" stroke-linecap="round"/></marker>
+      <marker id="one-line" markerWidth="16" markerHeight="20" refX="14" refY="10" orient="auto" markerUnits="userSpaceOnUse"><line x1="4" y1="2" x2="4" y2="18" stroke="#64b5f6" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="2" x2="12" y2="18" stroke="#64b5f6" stroke-width="2.5" stroke-linecap="round"/></marker>
+      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/></filter>
+    </defs>
+    <rect width="100%" height="100%" fill="#1e1e1e"/>
+    <g class="relationships-layer"></g>
+    <g class="tables-layer"></g>
+  </svg>
+</div>
+<div id="drop"><div class="box"><b>Drop a .dbml file here</b><br>or use “Open .dbml”. Everything runs in your browser — no upload, no Python.</div></div>
+<div id="side">
+  <h3 id="s-title">No schema loaded</h3>
+  <div class="meta" id="s-meta">Open or drop a .dbml file, or load the sample.</div>
+  <div id="s-list"></div>
+</div>
+<div id="busy">Building layout…</div>
+
+<script>
+"use strict";
+const SVGNS="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+const relsLayer=svg.querySelector('.relationships-layer');
+const tablesLayer=svg.querySelector('.tables-layer');
+const stage=document.getElementById('stage');
+
+// ---------- geometry ----------
+const W_TABLE=240, ROW_H=26, COL0_Y=61, HEADER_H=38;
+const tableHeight = n => 58 + ROW_H*Math.max(n,1);
+const colOffset   = i => COL0_Y + i*ROW_H;
+
+// ================= DBML PARSER (ported from the Python tool) =================
+function unquote(s){ s=s.trim(); if(s.length>=2 && (s[0]==='"'||s[0]==='`') && s[s.length-1]===s[0]) return s.slice(1,-1); return s; }
+function shortName(tok){
+  const parts=(tok.trim().match(/"[^"]*"|`[^`]*`|[^.]+/g)||[tok]).map(unquote);
+  return parts.length?parts[parts.length-1]:tok;
+}
+const CARD={'>':['N','1'],'<':['1','N'],'-':['1','1'],'<>':['N','N']};
+function refEndpoint(tok){
+  const m=tok.trim().match(/(.+?)\.\(?\s*([^,\)\s]+)/);
+  if(!m) return [null,null];
+  return [shortName(m[1]), unquote(m[2])];
+}
+function parseDBML(text){
+  text=text.replace(/\/\*[\s\S]*?\*\//g,'');           // block comments
+  const lines=text.split(/\r?\n/).map(l=>{ const i=l.indexOf('//'); return i>=0?l.slice(0,i):l; });
+  const tables={}, order=[], refs=[];
+  const SKIP=['project','enum','tablegroup','note','indexes'];
+  const addRef=(a,ac,b,bc,op)=>{ const c=CARD[op]||['N','1']; if(a&&b&&ac&&bc) refs.push([a,ac,b,bc,c[0],c[1]]); };
+  let i=0; const n=lines.length;
+  while(i<n){
+    let line=lines[i].trim(); i++;
+    if(!line) continue;
+    const low=line.toLowerCase();
+
+    if(low.startsWith('ref')){
+      const mref=line.match(/ref\b[^:{]*:?\s*(.*)$/i);
+      let body=mref?mref[1].trim():'';
+      if(line.includes('{') && !line.split('{')[0].includes(':')){
+        let block=line.slice(line.indexOf('{')+1);
+        while(!block.includes('}') && i<n){ block+=' '+lines[i]; i++; }
+        block=block.split('}')[0];
+        block.split(/[\n,]/).forEach(part=>{
+          const mm=part.match(/\s*(.+?)\s*([<>-]{1,2})\s*(.+?)\s*$/);
+          if(mm){ const [a,ac]=refEndpoint(mm[1]); const [b,bc]=refEndpoint(mm[3]); addRef(a,ac,b,bc,mm[2]); }
+        });
+        continue;
+      }
+      const mm=body.match(/(.+?)\s*([<>-]{1,2})\s*(.+?)\s*$/);
+      if(mm){ const [a,ac]=refEndpoint(mm[1]); const [b,bc]=refEndpoint(mm[3]); addRef(a,ac,b,bc,mm[2]); }
+      continue;
+    }
+
+    if(SKIP.some(k=>low.startsWith(k))){
+      if(line.includes('{')){
+        let depth=(line.split('{').length-1)-(line.split('}').length-1);
+        while(depth>0 && i<n){ depth+=(lines[i].split('{').length-1)-(lines[i].split('}').length-1); i++; }
+      }
+      continue;
+    }
+
+    const mt=line.match(/^table\s+(.+?)\s*(\{)?\s*$/i);
+    if(low.startsWith('table') && mt){
+      let decl=mt[1].replace(/\s+as\s+\w+\s*$/i,'');
+      const tname=shortName(decl);
+      if(!line.includes('{')){ while(i<n && !lines[i].includes('{')) i++; if(i<n) i++; }
+      const cols=[];
+      while(i<n && !lines[i].includes('}')){
+        const cl=lines[i].trim(); i++;
+        if(!cl) continue;
+        const cll=cl.toLowerCase();
+        if(cll.startsWith('indexes')||cll.startsWith('note')||cl.startsWith('(')) continue;
+        let cm=cl.match(/^("[^"]+"|`[^`]+`|[^\s\[]+)\s+([^\[\s]+(?:\([^)]*\))?)\s*(\[.*\])?/);
+        let cname,ctype,settings;
+        if(cm){ cname=unquote(cm[1]); ctype=cm[2]; settings=cm[3]||''; }
+        else{ cm=cl.match(/^("[^"]+"|`[^`]+`|\S+)\s*(\[.*\])?/); if(!cm) continue; cname=unquote(cm[1]); ctype=''; settings=cm[2]||''; }
+        const pk=/\b(pk|primary key)\b/i.test(settings);
+        const im=settings.match(/ref:\s*([<>-]{1,2})\s*([^\],]+)/i);
+        if(im){ const [b,bc]=refEndpoint(im[2]); addRef(tname,cname,b,bc,im[1]); }
+        cols.push({col:cname,type:ctype,pk});
+      }
+      if(i<n) i++;                                       // consume }
+      if(!(tname in tables)) order.push(tname);
+      tables[tname]=cols;
+      continue;
+    }
+  }
+  const valid=refs.filter(r=> (r[0] in tables) && (r[2] in tables));
+  return {order,tables,refs:valid};
+}
+
+// ================= LAYOUT (ported from the Python tool) =================
+function mulberry32(seed){ let a=seed>>>0; return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+function computeLayout(order, tables, refs, seeds){
+  const W={}, H={}, colIndex={};
+  order.forEach(n=>{ W[n]=W_TABLE; H[n]=tableHeight(tables[n].length);
+    const m={}; tables[n].forEach((c,idx)=>m[c.col]=idx); colIndex[n]=m; });
+
+  const E=[];
+  refs.forEach(([ftab,fcol,ttab,tcol,fc,tc])=>{
+    if(ftab===ttab) return;
+    const fi=colIndex[ftab][fcol], ti=colIndex[ttab][tcol];
+    const foff=(fi!==undefined)?colOffset(fi):H[ftab]/2;
+    const toff=(ti!==undefined)?colOffset(ti):H[ttab]/2;
+    E.push({f:ftab,t:ttab,foff,toff,fc,tc,fcol,tcol});
+  });
+
+  const deg={}; order.forEach(n=>deg[n]=0);
+  E.forEach(e=>{deg[e.f]++;deg[e.t]++;});
+  const connected=order.filter(n=>deg[n]>0);
+  const isolated =order.filter(n=>deg[n]===0);
+
+  const totalArea=connected.reduce((s,n)=>s+W[n]*H[n],0)||1;
+  const side=Math.sqrt(totalArea)*1.5;
+  const GAP_X=130, PAD_X=90, PAD_Y=46, MX=80, MY=40;
+  let cx={}, cy={}, rng=Math.random;
+  // adaptive iteration budget for big schemas
+  const iters = connected.length>120 ? 600 : 1400;
+
+  function repel(temp){
+    const fx={}, fy={}; connected.forEach(n=>{fx[n]=0;fy[n]=0;});
+    const cl=connected;
+    for(let a=0;a<cl.length;a++){ const na=cl[a];
+      for(let b=a+1;b<cl.length;b++){ const nb=cl[b];
+        let dx=cx[na]-cx[nb], dy=cy[na]-cy[nb];
+        if(dx===0&&dy===0){ dx=rng()*2-1; dy=rng()*2-1; }
+        const minx=(W[na]+W[nb])/2+PAD_X, miny=(H[na]+H[nb])/2+PAD_Y;
+        const ox=minx-Math.abs(dx), oy=miny-Math.abs(dy);
+        if(ox>0&&oy>0){
+          if(ox<oy){ const p=ox*0.5*(dx>=0?1:-1); fx[na]+=p; fx[nb]-=p; }
+          else     { const p=oy*0.5*(dy>=0?1:-1); fy[na]+=p; fy[nb]-=p; }
+        }
+        const dist2=dx*dx+dy*dy+1, f=9000/dist2, inv=1/Math.sqrt(dist2);
+        fx[na]+=dx*inv*f; fy[na]+=dy*inv*f; fx[nb]-=dx*inv*f; fy[nb]-=dy*inv*f;
+      }
+    }
+    return [fx,fy];
+  }
+  function attract(fx,fy){
+    E.forEach(e=>{ const f=e.f,t=e.t;
+      const af=(cy[f]-H[f]/2)+e.foff, at=(cy[t]-H[t]/2)+e.toff, v=at-af;
+      fy[f]+=0.08*v; fy[t]-=0.08*v;
+      const sx=cx[t]-cx[f], sep=(W[f]+W[t])/2+GAP_X, s=sx>=0?1:-1, err=Math.abs(sx)-sep;
+      fx[f]+=0.05*s*err; fx[t]-=0.05*s*err;
+    });
+  }
+  function overlapRemoval(){
+    const cl=connected;
+    for(let it=0;it<600;it++){ let moved=false;
+      for(let a=0;a<cl.length;a++){ const na=cl[a];
+        for(let b=a+1;b<cl.length;b++){ const nb=cl[b];
+          const dx=cx[na]-cx[nb], dy=cy[na]-cy[nb];
+          const ox=(W[na]+W[nb])/2+MX-Math.abs(dx), oy=(H[na]+H[nb])/2+MY-Math.abs(dy);
+          if(ox>0&&oy>0){ moved=true;
+            if(ox<oy){ const sh=ox/2*(dx>=0?1:-1); cx[na]+=sh; cx[nb]-=sh; }
+            else     { const sh=oy/2*(dy>=0?1:-1); cy[na]+=sh; cy[nb]-=sh; }
+          }
+        }
+      }
+      if(!moved) break;
+    }
+  }
+  const ccw=(A,B,C)=>(C[1]-A[1])*(B[0]-A[0])-(B[1]-A[1])*(C[0]-A[0]);
+  function metric(){
+    const segs=[];
+    E.forEach(e=>{ const f=e.f,t=e.t, fcx=cx[f], tcx=cx[t];
+      const fay=(cy[f]-H[f]/2)+e.foff, tay=(cy[t]-H[t]/2)+e.toff;
+      if(tcx>=fcx) segs.push([[cx[f]+W[f]/2,fay],[cx[t]-W[t]/2,tay],f,t]);
+      else         segs.push([[cx[f]-W[f]/2,fay],[cx[t]+W[t]/2,tay],f,t]);
+    });
+    let c=0,L=0;
+    for(let i2=0;i2<segs.length;i2++){ const [a1,a2,fa,ta]=segs[i2]; L+=Math.hypot(a2[0]-a1[0],a2[1]-a1[1]);
+      for(let j=i2+1;j<segs.length;j++){ const [b1,b2,fb,tb]=segs[j];
+        if(new Set([fa,ta,fb,tb]).size<4) continue;
+        const d1=ccw(a1,a2,b1),d2=ccw(a1,a2,b2),d3=ccw(b1,b2,a1),d4=ccw(b1,b2,a2);
+        if(((d1>0)!==(d2>0))&&((d3>0)!==(d4>0))) c++;
+      }
+    }
+    return [c,L];
+  }
+  function run(seed){
+    rng=mulberry32(seed+1);
+    connected.forEach(n=>{ cx[n]=rng()*side; cy[n]=rng()*side; });
+    let temp=side*0.1;
+    for(let it=0;it<iters;it++){
+      const [fx,fy]=repel(temp); attract(fx,fy);
+      connected.forEach(n=>{ let dx=fx[n],dy=fy[n]; const d=Math.hypot(dx,dy);
+        if(d>temp){ dx*=temp/d; dy*=temp/d; } cx[n]+=dx; cy[n]+=dy; });
+      temp=Math.max(temp*0.997,8);
+    }
+    overlapRemoval();
+    return metric();
+  }
+
+  let best=null;
+  if(connected.length){
+    for(let s=0;s<seeds;s++){ const [c,L]=run(s);
+      if(!best||c<best.c||(c===best.c&&L<best.L)) best={c,L,cx:Object.assign({},cx),cy:Object.assign({},cy)}; }
+    cx=best.cx; cy=best.cy;
+  }
+
+  const x={}, y={};
+  connected.forEach(n=>{ x[n]=cx[n]-W[n]/2; y[n]=cy[n]-H[n]/2; });
+  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+  connected.forEach(n=>{ minx=Math.min(minx,x[n]); miny=Math.min(miny,y[n]); maxx=Math.max(maxx,x[n]+W[n]); maxy=Math.max(maxy,y[n]+H[n]); });
+  if(!connected.length){ minx=miny=0; maxx=maxy=side; }
+  const M=80;
+  connected.forEach(n=>{ x[n]+=M-minx; y[n]+=M-miny; });
+  maxx+=M-minx; maxy+=M-miny;
+
+  let iy=maxy+160, ix=M, rowH=0, contentW=Math.max(maxx+M, side);
+  isolated.forEach(n=>{ if(ix+W[n]>contentW){ ix=M; iy+=rowH+80; rowH=0; } x[n]=ix; y[n]=iy; ix+=W[n]+80; rowH=Math.max(rowH,H[n]); });
+
+  let cw=0,ch=0; order.forEach(n=>{ cw=Math.max(cw,x[n]+W[n]); ch=Math.max(ch,y[n]+H[n]); });
+  cw=Math.ceil(cw+M); ch=Math.ceil(ch+M);
+
+  return {x,y,W,H,E,connected,isolated,cw,ch,tables,order,
+          crossings: best?best.c:0, length: best?best.L:0};
+}
+
+// ================= RENDER =================
+const esc = s => String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function el(tag,a,parent){ const e=document.createElementNS(SVGNS,tag); if(a) for(const k in a) e.setAttribute(k,a[k]); if(parent) parent.appendChild(e); return e; }
+function txt(parent,s,a){ const e=el('text',a,parent); e.textContent=s; return e; }
+
+let T={}, ADJ={}, RELS=[], lock=null, zoom=1, CW=100, CH=100, MODEL=null;
+
+function fkSet(refs){ const s=new Set(); refs.forEach(([f,fc,t,tc])=>{ s.add(f+' '+fc); s.add(t+' '+tc); }); return s; }
+
+function buildTable(name, cols, x, y, fks){
+  const h=tableHeight(cols.length);
+  const g=el('g',{class:'table draggable','data-table':name,transform:`translate(${Math.round(x)},${Math.round(y)})`},tablesLayer);
+  el('rect',{class:'table-bg',x:0,y:0,width:W_TABLE,height:h,fill:'#2a2a2a',stroke:'#3498db','stroke-width':2,rx:8,ry:8,filter:'url(#shadow)'},g);
+  el('rect',{class:'table-header-bg',x:0,y:0,width:W_TABLE,height:HEADER_H,fill:'#3498db',rx:8,ry:8},g);
+  el('rect',{x:0,y:HEADER_H-8,width:W_TABLE,height:8,fill:'#3498db'},g);
+  txt(g,name,{x:W_TABLE/2,y:24,'text-anchor':'middle',class:'table-header'});
+  cols.forEach((c,i)=>{ const by=colOffset(i);
+    if(i%2===1) el('rect',{x:2,y:by-15,width:W_TABLE-4,height:ROW_H,fill:'rgba(255,255,255,0.02)',rx:2},g);
+    const cg=el('g',{class:'column','data-table':name,'data-column':c.col},g);
+    if(c.pk){ txt(cg,'PK',{x:10,y:by,class:'pk-icon'}); txt(cg,c.col,{x:30,y:by,class:'column-name'}); }
+    else if(fks.has(name+' '+c.col)){ txt(cg,'🔗',{x:10,y:by,class:'fk-icon'}); txt(cg,c.col,{x:28,y:by,class:'column-name'}); }
+    else txt(cg,c.col,{x:14,y:by,class:'column-name'});
+    if(c.type) txt(cg,c.type,{x:W_TABLE-10,y:by,'text-anchor':'end',class:'column-type'});
+    if(i<cols.length-1) el('line',{x1:8,y1:by+12,x2:W_TABLE-8,y2:by+12,stroke:'rgba(255,255,255,0.05)','stroke-width':1},g);
+  });
+  return g;
+}
+
+function mk(card){ return card==='N' ? 'url(#many-crow)' : 'url(#one-line)'; }
+function route(r){
+  const f=T[r.f],t=T[r.t]; const fcx=f.x+f.w/2,tcx=t.x+t.w/2;
+  const fay=f.y+r.foff, tay=t.y+r.toff; let p0,p3,fr,el2;
+  if(tcx>=fcx){p0=[f.x+f.w,fay];p3=[t.x,tay];fr=true;el2=true;}
+  else{p0=[f.x,fay];p3=[t.x+t.w,tay];fr=false;el2=false;}
+  const co=Math.min(Math.max(Math.abs(p3[0]-p0[0])*0.5,45),160);
+  const c1=[fr?p0[0]+co:p0[0]-co,p0[1]], c2=[el2?p3[0]-co:p3[0]+co,p3[1]];
+  return {d:`M ${p0[0].toFixed(0)} ${p0[1].toFixed(0)} C ${c1[0].toFixed(0)} ${c1[1].toFixed(0)}, ${c2[0].toFixed(0)} ${c2[1].toFixed(0)}, ${p3[0].toFixed(0)} ${p3[1].toFixed(0)}`,
+    fbx:(fr?p0[0]+16:p0[0]-40),fby:p0[1]-24,ftx:(fr?p0[0]+28:p0[0]-28),fty:p0[1]-10,
+    tbx:(el2?p3[0]-40:p3[0]+16),tby:p3[1]-24,ttx:(el2?p3[0]-28:p3[0]+28),tty:p3[1]-10};
+}
+function drawRel(r){ const g=r._g,m=route(r); g.vis.setAttribute('d',m.d); g.hit.setAttribute('d',m.d);
+  g.fb.setAttribute('x',m.fbx);g.fb.setAttribute('y',m.fby);g.ft.setAttribute('x',m.ftx);g.ft.setAttribute('y',m.fty);
+  g.tb.setAttribute('x',m.tbx);g.tb.setAttribute('y',m.tby);g.tt.setAttribute('x',m.ttx);g.tt.setAttribute('y',m.tty); }
+
+function render(model){
+  MODEL=model; CW=model.cw; CH=model.ch; lock=null;
+  relsLayer.textContent=''; tablesLayer.textContent='';
+  svg.setAttribute('viewBox',`0 0 ${CW} ${CH}`);
+  const fks=fkSet(model.refsRaw);
+  T={}; ADJ={}; RELS=[];
+  model.order.forEach(n=>{ const g=buildTable(n,model.tables[n],model.x[n],model.y[n],fks);
+    T[n]={name:n,x:model.x[n],y:model.y[n],w:model.W[n],h:model.H[n],el:g}; ADJ[n]=new Set(); });
+  // table interactions
+  model.order.forEach(n=>{ const e=T[n].el;
+    e.addEventListener('mouseenter',()=>{ if(!lock) highlight(n); });
+    e.addEventListener('mouseleave',()=>{ if(!lock) clear(); });
+    e.addEventListener('click',ev=>{ if(dragMoved) return; ev.stopPropagation();
+      if(lock===n){lock=null;clear();} else {lock=n;highlight(n);} });
+  });
+  // relationships
+  model.E.forEach(e=>{ ADJ[e.f].add(e.t); ADJ[e.t].add(e.f);
+    const g=el('g',{class:'relationship','data-from-table':e.f,'data-to-table':e.t},relsLayer);
+    const vis=el('path',{class:'relation-line',stroke:'#64b5f6','stroke-opacity':'0.6','stroke-width':'2',fill:'none','marker-start':mk(e.fc),'marker-end':mk(e.tc)},g);
+    const hit=el('path',{stroke:'transparent','stroke-width':'18',fill:'none'},g);
+    const fb=el('rect',{width:24,height:20,rx:4,fill:'#2a2a2a',stroke:'#64b5f6','stroke-width':1,opacity:.9},g);
+    const ft=txt(g,e.fc,{'text-anchor':'middle',class:'cardinality-label',fill:'#64b5f6'});
+    const tb=el('rect',{width:24,height:20,rx:4,fill:'#2a2a2a',stroke:'#64b5f6','stroke-width':1,opacity:.9},g);
+    const tt=txt(g,e.tc,{'text-anchor':'middle',class:'cardinality-label',fill:'#64b5f6'});
+    const r=Object.assign({},e,{_g:{g,vis,hit,fb,ft,tb,tt}}); RELS.push(r);
+    g.addEventListener('mouseenter',()=>{ if(!lock) hot(new Set([e.f,e.t]),x=>x===r); });
+    g.addEventListener('mouseleave',()=>{ if(!lock) clear(); });
+  });
+  RELS.forEach(drawRel);
+  resetPanel();
+  fit();
+  document.getElementById('drop').style.display='none';
+}
+
+// ---------- highlight ----------
+function hot(nb,pred){
+  RELS.forEach(r=>{ const on=pred(r); r._g.g.classList.toggle('hot',on); r._g.g.classList.toggle('dim',!on); if(on) relsLayer.appendChild(r._g.g); });
+  for(const n in T){ const e=T[n].el; const keep=nb.has(n); e.classList.toggle('dim',!keep); e.classList.toggle('sel',lock===n); }
+}
+function highlight(name){ const nb=new Set([name]); ADJ[name].forEach(k=>nb.add(k)); hot(nb,r=>r.f===name||r.t===name); panel(name); }
+function clear(){ RELS.forEach(r=>r._g.g.classList.remove('hot','dim')); for(const n in T) T[n].el.classList.remove('dim','sel'); if(!lock) resetPanel(); }
+
+// ---------- side panel ----------
+const sTitle=document.getElementById('s-title'),sMeta=document.getElementById('s-meta'),sList=document.getElementById('s-list');
+function resetPanel(){
+  if(MODEL){ sTitle.textContent=MODEL.order.length+' tables'; sMeta.textContent=MODEL.E.length+' relationships · '+MODEL.crossings+' crossings · click a table'; }
+  else { sTitle.textContent='No schema loaded'; sMeta.textContent='Open or drop a .dbml file, or load the sample.'; }
+  sList.innerHTML='';
+}
+function panel(name){
+  const out=[],inc=[];
+  RELS.forEach(r=>{ if(r.f===name)out.push(r); else if(r.t===name)inc.push(r); });
+  sTitle.textContent=name; sMeta.textContent=`${ADJ[name].size} linked tables · ${out.length+inc.length} relationships`;
+  let h='';
+  const block=(title,arr,fn)=>{ if(!arr.length)return; h+=`<div class="grp">${title}</div>`;
+    arr.slice().sort((a,b)=>fn(a).g.localeCompare(fn(b).g)).forEach(r=>{const o=fn(r);
+      h+=`<a data-go="${esc(o.g)}">${esc(o.g)} <small>${o.card}</small><br><small>${esc(o.via)}</small></a>`;});};
+  block('References (N→1)', out, r=>({g:r.t,card:`${r.fc}→${r.tc}`,via:`${r.fcol} → ${r.t}.${r.tcol}`}));
+  block('Referenced by (1→N)', inc, r=>({g:r.f,card:`${r.fc}→${r.tc}`,via:`${r.f}.${r.fcol} → ${r.tcol}`}));
+  sList.innerHTML=h;
+  sList.querySelectorAll('a[data-go]').forEach(a=>a.addEventListener('click',ev=>{ ev.stopPropagation(); const g=a.getAttribute('data-go'); lock=g; highlight(g); focusTable(g); }));
+}
+
+// ---------- zoom / fit / find ----------
+function applyZoom(){ svg.setAttribute('width',(CW*zoom).toFixed(0)); svg.setAttribute('height',(CH*zoom).toFixed(0)); }
+function fit(){ zoom=Math.max(Math.min(stage.clientWidth/CW,stage.clientHeight/CH)*0.98,0.03); applyZoom(); }
+function focusTable(n){ const t=T[n]; stage.scrollTo({left:(t.x+t.w/2)*zoom-stage.clientWidth/2, top:(t.y+t.h/2)*zoom-stage.clientHeight/2, behavior:'smooth'}); }
+document.getElementById('zin').onclick=()=>{ zoom=Math.min(zoom*1.25,4); applyZoom(); };
+document.getElementById('zout').onclick=()=>{ zoom=Math.max(zoom/1.25,0.03); applyZoom(); };
+document.getElementById('fit').onclick=fit;
+document.getElementById('reset').onclick=()=>{ lock=null; clear(); };
+document.getElementById('find').addEventListener('input',e=>{ const q=e.target.value.trim().toLowerCase(); if(!q||!MODEL)return;
+  const hit=MODEL.order.find(n=>n.toLowerCase().includes(q)); if(hit){ lock=hit; highlight(hit); focusTable(hit); } });
+stage.addEventListener('click',()=>{ if(lock){ lock=null; clear(); } });
+
+// ---------- edit / drag ----------
+let editMode=false,dragMoved=false,drag=null;
+document.getElementById('edit').addEventListener('change',e=>{ editMode=e.target.checked; document.body.classList.toggle('edit',editMode); });
+svg.addEventListener('pointerdown',e=>{ if(!editMode)return; const g=e.target.closest('g.table'); if(!g)return;
+  const n=g.getAttribute('data-table'); drag={n,sx:e.clientX,sy:e.clientY,x0:T[n].x,y0:T[n].y}; dragMoved=false; g.setPointerCapture(e.pointerId); e.preventDefault(); });
+svg.addEventListener('pointermove',e=>{ if(!drag)return; const dx=(e.clientX-drag.sx)/zoom,dy=(e.clientY-drag.sy)/zoom;
+  if(Math.abs(dx)+Math.abs(dy)>2)dragMoved=true; const t=T[drag.n]; t.x=drag.x0+dx; t.y=drag.y0+dy;
+  t.el.setAttribute('transform',`translate(${t.x.toFixed(1)},${t.y.toFixed(1)})`);
+  RELS.forEach(r=>{ if(r.f===drag.n||r.t===drag.n) drawRel(r); }); });
+svg.addEventListener('pointerup',()=>{ drag=null; setTimeout(()=>dragMoved=false,0); });
+
+// ---------- export ----------
+document.getElementById('save').onclick=()=>{ if(!MODEL)return; lock=null; clear();
+  const s='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(svg);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'})); a.download='diagram_untangled.svg'; a.click(); };
+
+// ---------- load a schema ----------
+const busy=document.getElementById('busy');
+function loadText(text){
+  busy.classList.add('on');
+  setTimeout(()=>{
+    try{
+      const {order,tables,refs}=parseDBML(text);
+      if(!order.length){ alert('No tables found — is this a DBML file?'); busy.classList.remove('on'); return; }
+      const seeds = order.length>120 ? 4 : (order.length>60 ? 8 : 14);
+      const model=computeLayout(order,tables,refs,seeds);
+      model.refsRaw=refs;
+      render(model);
+    }catch(err){ alert('Failed to parse/render: '+err.message); console.error(err); }
+    busy.classList.remove('on');
+  },30);
+}
+function decodeBuffer(buf){
+  const b=new Uint8Array(buf);
+  if(b[0]===0xFF&&b[1]===0xFE) return new TextDecoder('utf-16le').decode(buf);
+  if(b[0]===0xFE&&b[1]===0xFF) return new TextDecoder('utf-16be').decode(buf);
+  if(b[0]===0xEF&&b[1]===0xBB&&b[2]===0xBF) return new TextDecoder('utf-8').decode(buf);
+  // heuristic: lots of NUL -> utf-16le without BOM
+  let nul=0; for(let i=0;i<Math.min(b.length,400);i++) if(b[i]===0) nul++;
+  if(nul>40) return new TextDecoder('utf-16le').decode(buf);
+  return new TextDecoder('utf-8').decode(buf);
+}
+function loadFile(file){ const r=new FileReader(); r.onload=()=>loadText(decodeBuffer(r.result)); r.readAsArrayBuffer(file); }
+
+document.getElementById('open').onclick=()=>document.getElementById('file').click();
+document.getElementById('file').addEventListener('change',e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+document.getElementById('sample').onclick=()=>loadText(SAMPLE_DBML);
+
+// drag & drop anywhere
+['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{ e.preventDefault(); document.body.classList.add('dragover'); }));
+['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{ e.preventDefault(); if(ev==='drop'||e.relatedTarget===null) document.body.classList.remove('dragover'); }));
+document.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
+
+// ---------- embedded sample ----------
+const SAMPLE_DBML=`// Sample e-commerce schema for dbml-er-viewer
+// Demonstrates hubs (users, products, orders), self-reference,
+// one-to-one, inline refs and isolated tables.
+
+Table users {
+  id bigint [pk]
+  email varchar
+  display_name varchar
+  created_at datetime
+}
+
+Table profiles {
+  id bigint [pk]
+  user_id bigint
+  bio varchar
+  avatar_url varchar
+}
+
+Table addresses {
+  id bigint [pk]
+  user_id bigint
+  line1 varchar
+  city varchar
+  country varchar
+  postcode varchar
+}
+
+Table categories {
+  id bigint [pk]
+  parent_id bigint
+  name varchar
+  slug varchar
+}
+
+Table products {
+  id bigint [pk]
+  category_id bigint
+  sku varchar
+  title varchar
+  price decimal
+  weight float
+  created_at datetime
+}
+
+Table tags {
+  id bigint [pk]
+  name varchar
+}
+
+Table product_tags {
+  product_id bigint
+  tag_id bigint
+}
+
+Table orders {
+  id bigint [pk]
+  user_id bigint
+  shipping_address_id bigint
+  billing_address_id bigint
+  status varchar
+  total decimal
+  placed_at datetime
+}
+
+Table order_items {
+  id bigint [pk]
+  order_id bigint
+  product_id bigint
+  quantity int
+  unit_price decimal
+}
+
+Table payments {
+  id bigint [pk]
+  order_id bigint
+  method varchar
+  amount decimal
+  paid_at datetime
+}
+
+Table carriers {
+  id bigint [pk]
+  name varchar
+  tracking_url varchar
+}
+
+Table shipments {
+  id bigint [pk]
+  order_id bigint
+  carrier_id bigint
+  tracking_no varchar
+  shipped_at datetime
+}
+
+Table reviews {
+  id bigint [pk]
+  product_id bigint
+  user_id bigint
+  rating int
+  body varchar
+  created_at datetime
+}
+
+Table warehouses {
+  id bigint [pk]
+  name varchar
+  region varchar
+}
+
+Table inventory {
+  id bigint [pk]
+  product_id bigint
+  warehouse_id bigint
+  on_hand int
+  reserved int
+}
+
+// Isolated tables (no relationships) land in a tidy row of their own.
+Table audit_log {
+  id bigint [pk]
+  entity varchar
+  action varchar
+  at datetime
+}
+
+Table settings {
+  id bigint [pk]
+  key varchar
+  value varchar
+}
+
+// one-to-one
+Ref: profiles.user_id - users.id
+
+// many-to-one
+Ref: addresses.user_id > users.id
+Ref: products.category_id > categories.id
+Ref: categories.parent_id > categories.id
+Ref: product_tags.product_id > products.id
+Ref: product_tags.tag_id > tags.id
+Ref: orders.user_id > users.id
+Ref: orders.shipping_address_id > addresses.id
+Ref: orders.billing_address_id > addresses.id
+Ref: order_items.order_id > orders.id
+Ref: order_items.product_id > products.id
+Ref: payments.order_id > orders.id
+Ref: shipments.order_id > orders.id
+Ref: shipments.carrier_id > carriers.id
+Ref: reviews.product_id > products.id
+Ref: reviews.user_id > users.id
+Ref: inventory.product_id > products.id
+Ref: inventory.warehouse_id > warehouses.id
+`;
+
+// auto-load the sample so the page isn't empty on first open
+loadText(SAMPLE_DBML);
+</script>
+</body>
+</html>
