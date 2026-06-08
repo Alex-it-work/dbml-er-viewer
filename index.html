@@ -18,7 +18,6 @@
   #hint{ color:#888; font-size:12px; }
   #stage{ position:absolute; top:46px; left:0; right:280px; bottom:0; overflow:hidden; touch-action:none; cursor:grab; }
   #stage.panning{ cursor:grabbing; }
-  #stage.panning *{ pointer-events:none; }
   #side{ position:absolute; top:46px; right:0; bottom:0; width:280px; background:var(--bar); border-left:1px solid var(--line); overflow:auto; padding:12px; font-size:13px; }
   #side h3{ margin:0 0 6px; font-size:14px; color:#fff; word-break:break-all; }
   #side .meta{ color:#888; font-size:12px; margin-bottom:10px; }
@@ -60,6 +59,7 @@
   <input id="file" type="file" accept=".dbml,.txt" style="display:none">
   <input id="find" type="search" placeholder="find table…" autocomplete="off">
   <button id="zin">+</button><button id="zout">&minus;</button><button id="fit">Fit</button>
+  <span id="zlabel" style="color:#888; min-width:42px; text-align:center;">100%</span>
   <button id="reset">Clear</button>
   <label><input type="checkbox" id="edit"> Edit</label>
   <button id="save">Export SVG</button>
@@ -317,7 +317,7 @@ const esc = s => String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
 function el(tag,a,parent){ const e=document.createElementNS(SVGNS,tag); if(a) for(const k in a) e.setAttribute(k,a[k]); if(parent) parent.appendChild(e); return e; }
 function txt(parent,s,a){ const e=el('text',a,parent); e.textContent=s; return e; }
 
-let T={}, ADJ={}, RELS=[], lock=null, CW=100, CH=100, MODEL=null;
+let T={}, ADJ={}, RELS=[], lock=null, CW=100, CH=100, MODEL=null, gesture=null, suppressClick=false;
 
 // fk lookup: table -> Set(columns that take part in a relationship)
 function fkMap(refs){ const m={}; const add=(t,c)=>{ (m[t]||(m[t]=new Set())).add(c); };
@@ -368,9 +368,9 @@ function render(model){
     T[n]={name:n,x:model.x[n],y:model.y[n],w:model.W[n],h:model.H[n],el:g}; ADJ[n]=new Set(); });
   // table interactions
   model.order.forEach(n=>{ const e=T[n].el;
-    e.addEventListener('mouseenter',()=>{ if(!lock && !panning) highlight(n); });
-    e.addEventListener('mouseleave',()=>{ if(!lock && !panning) clear(); });
-    e.addEventListener('click',ev=>{ if(moved) return; ev.stopPropagation();
+    e.addEventListener('mouseenter',()=>{ if(!lock && !gesture) highlight(n); });
+    e.addEventListener('mouseleave',()=>{ if(!lock && !gesture) clear(); });
+    e.addEventListener('click',ev=>{ if(suppressClick) return; ev.stopPropagation();
       if(lock===n){lock=null;clear();} else {lock=n;highlight(n);} });
   });
   // relationships
@@ -383,8 +383,8 @@ function render(model){
     const tb=el('rect',{width:24,height:20,rx:4,fill:'#2a2a2a',stroke:'#64b5f6','stroke-width':1,opacity:.9},g);
     const tt=txt(g,e.tc,{'text-anchor':'middle',class:'cardinality-label',fill:'#64b5f6'});
     const r=Object.assign({},e,{_g:{g,vis,hit,fb,ft,tb,tt}}); RELS.push(r);
-    g.addEventListener('mouseenter',()=>{ if(!lock && !panning) hot(new Set([e.f,e.t]),x=>x===r); });
-    g.addEventListener('mouseleave',()=>{ if(!lock && !panning) clear(); });
+    g.addEventListener('mouseenter',()=>{ if(!lock && !gesture) hot(new Set([e.f,e.t]),x=>x===r); });
+    g.addEventListener('mouseleave',()=>{ if(!lock && !gesture) clear(); });
   });
   RELS.forEach(drawRel);
   resetPanel();
@@ -421,67 +421,71 @@ function panel(name){
   sList.querySelectorAll('a[data-go]').forEach(a=>a.addEventListener('click',ev=>{ ev.stopPropagation(); const g=a.getAttribute('data-go'); lock=g; highlight(g); focusTable(g); }));
 }
 
-// ========================= VIEW: pan + zoom via a transform =========================
+// ========================= VIEW: pan + zoom via a viewport transform =========================
 // screen = translate(tx,ty) * scale(k) * content
 let k=1, tx=0, ty=0;
-function applyView(){ viewport.setAttribute('transform',`translate(${tx.toFixed(2)},${ty.toFixed(2)}) scale(${k})`); }
+function applyView(){ viewport.setAttribute('transform','translate('+tx.toFixed(2)+' '+ty.toFixed(2)+') scale('+k+')');
+  const z=document.getElementById('zlabel'); if(z) z.textContent=Math.round(k*100)+'%'; }
 function fit(){ const sw=stage.clientWidth||1, sh=stage.clientHeight||1;
-  k=Math.min(sw/CW, sh/CH)*0.95 || 1; tx=(sw-CW*k)/2; ty=(sh-CH*k)/2; applyView(); }
+  k=(Math.min(sw/CW, sh/CH)*0.95) || 1; tx=(sw-CW*k)/2; ty=(sh-CH*k)/2; applyView(); }
 function zoomAt(factor, cxClient, cyClient){
   const r=stage.getBoundingClientRect();
-  const mx=cxClient-r.left, my=cyClient-r.top;
-  const ux=(mx-tx)/k, uy=(my-ty)/k;                 // content point under the cursor
+  const mx=cxClient-r.left, my=cyClient-r.top;           // cursor in stage-local px
+  const ux=(mx-tx)/k, uy=(my-ty)/k;                      // content point under the cursor
   k=Math.min(Math.max(k*factor,0.02),8);
-  tx=mx-ux*k; ty=my-uy*k;                           // keep that point fixed
+  tx=mx-ux*k; ty=my-uy*k;                                // keep that point under the cursor
   applyView();
 }
 function focusTable(n){ const t=T[n], sw=stage.clientWidth, sh=stage.clientHeight;
   tx=sw/2-(t.x+t.w/2)*k; ty=sh/2-(t.y+t.h/2)*k; applyView(); }
 
-// wheel = zoom toward the cursor
-stage.addEventListener('wheel',e=>{ e.preventDefault();
-  zoomAt(Math.exp((e.deltaY<0?1:-1)*0.12), e.clientX, e.clientY);
+// --- wheel: zoom toward the cursor ---
+stage.addEventListener('wheel',function(e){ e.preventDefault(); e.stopPropagation();
+  zoomAt(e.deltaY<0 ? 1.12 : 1/1.12, e.clientX, e.clientY);
 },{passive:false});
 
-// drag = pan (left on empty canvas, or middle anywhere). Hand-style: content follows the cursor 1:1.
-let editMode=false, drag=null, panning=null, panCand=null, moved=false, downOnTable=false;
+// --- drag: pan (left on empty space / middle anywhere) or move a table (edit mode). ---
+// Listeners live on window so the gesture keeps working even when the cursor leaves the svg.
+let editMode=false;
 document.getElementById('edit').addEventListener('change',e=>{ editMode=e.target.checked; document.body.classList.toggle('edit',editMode); });
 
-svg.addEventListener('pointerdown',e=>{
-  moved=false; const g=e.target.closest('g.table'); downOnTable=!!g;
-  if(editMode && e.button===0 && g){                       // move a table
-    const n=g.getAttribute('data-table');
-    drag={n,sx:e.clientX,sy:e.clientY,x0:T[n].x,y0:T[n].y};
-    try{ svg.setPointerCapture(e.pointerId); }catch(_){} e.preventDefault(); return;
+function onGestureDown(e){
+  if(e.button!==0 && e.button!==1) return;
+  const tableEl = e.target.closest && e.target.closest('g.table');
+  if(editMode && e.button===0 && tableEl){
+    const n=tableEl.getAttribute('data-table');
+    gesture={type:'drag', n, sx:e.clientX, sy:e.clientY, x0:T[n].x, y0:T[n].y, moved:false};
+  } else if(e.button===1 || (e.button===0 && !tableEl)){
+    gesture={type:'pan', sx:e.clientX, sy:e.clientY, tx0:tx, ty0:ty, moved:false, btn:e.button};
+  } else {
+    return;                                              // left-click a table -> let it select
   }
-  if(e.button===1 || (e.button===0 && !g)){                // candidate pan
-    panCand={sx:e.clientX,sy:e.clientY,tx0:tx,ty0:ty,id:e.pointerId,btn:e.button};
-    if(e.button===1) e.preventDefault();
+  e.preventDefault();
+  window.addEventListener('pointermove', onGestureMove);
+  window.addEventListener('pointerup', onGestureUp);
+}
+function onGestureMove(e){
+  if(!gesture) return;
+  const dx=e.clientX-gesture.sx, dy=e.clientY-gesture.sy;
+  if(!gesture.moved && Math.abs(dx)+Math.abs(dy)>3){ gesture.moved=true; if(gesture.type==='pan') stage.classList.add('panning'); }
+  if(gesture.type==='drag'){
+    const t=T[gesture.n]; t.x=gesture.x0+dx/k; t.y=gesture.y0+dy/k;
+    t.el.setAttribute('transform','translate('+t.x.toFixed(1)+' '+t.y.toFixed(1)+')');
+    RELS.forEach(r=>{ if(r.f===gesture.n||r.t===gesture.n) drawRel(r); });
+  } else {
+    tx=gesture.tx0+dx; ty=gesture.ty0+dy; applyView();   // 1:1 hand pan
   }
-});
-svg.addEventListener('pointermove',e=>{
-  if(drag){ const dx=(e.clientX-drag.sx)/k, dy=(e.clientY-drag.sy)/k;
-    if(Math.abs(dx)+Math.abs(dy)>2/k) moved=true;
-    const t=T[drag.n]; t.x=drag.x0+dx; t.y=drag.y0+dy;
-    t.el.setAttribute('transform',`translate(${t.x.toFixed(1)},${t.y.toFixed(1)})`);
-    RELS.forEach(r=>{ if(r.f===drag.n||r.t===drag.n) drawRel(r); }); return; }
-  if(panCand && !panning){
-    if(Math.abs(e.clientX-panCand.sx)+Math.abs(e.clientY-panCand.sy)>4){
-      panning=panCand; moved=true; try{ svg.setPointerCapture(panning.id); }catch(_){} stage.classList.add('panning');
-    }
-  }
-  if(panning){ tx=panning.tx0+(e.clientX-panning.sx); ty=panning.ty0+(e.clientY-panning.sy); applyView(); }
-});
-function endInteraction(){ try{ if(panning) svg.releasePointerCapture(panning.id); }catch(_){}
-  panning=null; panCand=null; drag=null; stage.classList.remove('panning'); }
-svg.addEventListener('pointerup',e=>{
-  const click = (e.button===0 && !moved && !downOnTable);
-  endInteraction();
-  if(click && lock){ lock=null; clear(); }                 // click on empty space clears selection
-});
-svg.addEventListener('pointercancel',endInteraction);
-svg.addEventListener('mousedown',e=>{ if(e.button===1) e.preventDefault(); });   // no middle-click autoscroll
-svg.addEventListener('auxclick',e=>{ if(e.button===1) e.preventDefault(); });
+}
+function onGestureUp(){
+  window.removeEventListener('pointermove', onGestureMove);
+  window.removeEventListener('pointerup', onGestureUp);
+  const gz=gesture; gesture=null; stage.classList.remove('panning');
+  if(gz && gz.moved){ suppressClick=true; setTimeout(()=>{ suppressClick=false; },0); }
+  else if(gz && gz.type==='pan' && gz.btn===0 && lock){ lock=null; clear(); }   // plain click on empty -> clear
+}
+stage.addEventListener('pointerdown', onGestureDown);
+stage.addEventListener('mousedown', e=>{ if(e.button===1) e.preventDefault(); });   // no middle-click autoscroll
+stage.addEventListener('auxclick', e=>{ if(e.button===1) e.preventDefault(); });
 
 function stageCenter(){ const r=stage.getBoundingClientRect(); return [r.left+r.width/2, r.top+r.height/2]; }
 document.getElementById('zin').onclick=()=>{ const c=stageCenter(); zoomAt(1.25,c[0],c[1]); };
