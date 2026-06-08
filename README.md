@@ -19,7 +19,7 @@ This tool re-lays-out the schema from the source and ships a viewer where you ca
 - **Untangled layout** — force-directed placement; multiple random seeds are tried and the one with the fewest line crossings wins. Hub tables drift to the center, satellites cluster around them, isolated tables get their own tidy row.
 - **Click to highlight** — select a table and only its links stay lit; the rest fades. A side panel shows linked tables split into *References (N→1)* and *Referenced by (1→N)*, each with the exact `column → table.column`.
 - **Search** any table by name and jump to it.
-- **Navigation** — zoom with the mouse wheel (centred on the cursor), pan by dragging with the middle mouse button. No scrollbars; `+` / `−` / `Fit` buttons too.
+- **Navigation** — zoom with the mouse wheel (centred on the cursor), pan by dragging the canvas (left button on empty space, or middle button anywhere) — the view follows the cursor like a hand tool. No scrollbars; `+` / `−` / `Fit` buttons too.
 - **Edit mode** — drag tables around; the relationship lines re-route live.
 - **Export SVG** — save the current (possibly edited) diagram as a static `.svg`.
 - **Cardinality markers** — crow's-foot for *many*, bar for *one*; supports `>`, `<`, `-` (one-to-one) and `<>`.

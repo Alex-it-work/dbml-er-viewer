@@ -460,7 +460,7 @@ HTML_TPL = r'''<!DOCTYPE html>
   #bar label{ display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
   #bar .sep{ flex:1; }
   #hint{ color:#888; font-size:12px; }
-  #stage{ position:absolute; top:46px; left:0; right:280px; bottom:0; overflow:hidden; touch-action:none; }
+  #stage{ position:absolute; top:46px; left:0; right:280px; bottom:0; overflow:hidden; touch-action:none; cursor:grab; }
   #stage.panning{ cursor:grabbing; }
   #stage.panning *{ pointer-events:none; }
   #side{ position:absolute; top:46px; right:0; bottom:0; width:280px; background:var(--bar); border-left:1px solid var(--line); overflow:auto; padding:12px; font-size:13px; }
@@ -470,7 +470,8 @@ HTML_TPL = r'''<!DOCTYPE html>
   #side a{ display:block; padding:4px 7px; border-radius:5px; color:#cfe3ff; text-decoration:none; cursor:pointer; }
   #side a:hover{ background:#333; }
   #side a small{ color:#888; }
-  svg{ display:block; }
+  svg#svg{ display:block; width:100%; height:100%; }
+  g.table{ cursor:pointer; }
   g.relationship{ transition:opacity .12s; }
   g.relationship.dim{ opacity:.045; }
   g.relationship.hot .relation-line{ stroke:var(--hot)!important; stroke-opacity:1!important; stroke-width:3.5!important; }
@@ -490,15 +491,17 @@ HTML_TPL = r'''<!DOCTYPE html>
   <label><input type="checkbox" id="edit"> Edit</label>
   <button id="save">Export SVG</button>
   <span class="sep"></span>
-  <span id="hint">wheel: zoom · middle-drag: pan · click a table to highlight</span>
+  <span id="hint">wheel: zoom · drag: pan · click a table to highlight</span>
 </div>
 <div id="stage">
-  <svg id="svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 __VW__ __VH__" width="__VW__" height="__VH__">
+  <svg id="svg" xmlns="http://www.w3.org/2000/svg">
 __DEFS__
-    <rect width="100%" height="100%" fill="#1e1e1e"/>
-    <g class="relationships-layer"></g>
-    <g class="tables-layer">
+    <rect id="bg" width="100%" height="100%" fill="#1e1e1e"/>
+    <g id="viewport">
+      <g class="relationships-layer"></g>
+      <g class="tables-layer">
 __TABLES__
+      </g>
     </g>
   </svg>
 </div>
@@ -511,6 +514,7 @@ __TABLES__
 const DATA = __DATA__;
 const SVGNS="http://www.w3.org/2000/svg";
 const svg=document.getElementById('svg');
+const viewport=document.getElementById('viewport');
 const relsLayer=svg.querySelector('.relationships-layer');
 const stage=document.getElementById('stage');
 const VW=__VW__, VH=__VH__;
@@ -558,7 +562,7 @@ document.querySelectorAll('g.table').forEach(e=>{const n=e.getAttribute('data-ta
   e.addEventListener('mouseenter',()=>{if(!lock)highlight(n);});
   e.addEventListener('mouseleave',()=>{if(!lock)clear();});
   e.addEventListener('click',ev=>{if(dragMoved)return; ev.stopPropagation(); if(lock===n){lock=null;clear();}else{lock=n;highlight(n);}});});
-stage.addEventListener('click',()=>{if(lock){lock=null;clear();}});
+// (empty-canvas click clears the selection — handled in the pointerup handler below)
 const sTitle=document.getElementById('s-title'),sMeta=document.getElementById('s-meta'),sList=document.getElementById('s-list');
 function resetPanel(){sTitle.textContent='Select a table'; sMeta.textContent='Hover or click a table to see its relationships.'; sList.innerHTML='';}
 function panel(name){
@@ -574,43 +578,44 @@ function panel(name){
   sList.innerHTML=h;
   sList.querySelectorAll('a[data-go]').forEach(a=>a.addEventListener('click',ev=>{ev.stopPropagation(); const g=a.getAttribute('data-go'); lock=g; highlight(g); focusTable(g);}));
 }
-let zoom=1;
-function applyZoom(){svg.setAttribute('width',(VW*zoom).toFixed(0)); svg.setAttribute('height',(VH*zoom).toFixed(0));}
-function setZoom(z){zoom=Math.min(Math.max(z,0.02),6); applyZoom();}
-function fit(){setZoom(Math.min(stage.clientWidth/VW,stage.clientHeight/VH)*0.98);}
-function zoomAt(factor,cxClient,cyClient){const rect=stage.getBoundingClientRect();
-  const mx=cxClient-rect.left,my=cyClient-rect.top;
-  const lx=(stage.scrollLeft+mx)/zoom, ly=(stage.scrollTop+my)/zoom;
-  setZoom(zoom*factor); stage.scrollLeft=lx*zoom-mx; stage.scrollTop=ly*zoom-my;}
-stage.addEventListener('wheel',e=>{e.preventDefault(); zoomAt(Math.exp((e.deltaY<0?1:-1)*0.12),e.clientX,e.clientY);},{passive:false});
-let pan=null;
-stage.addEventListener('pointerdown',e=>{if(e.button!==1)return; e.preventDefault();
-  pan={x:e.clientX,y:e.clientY,sl:stage.scrollLeft,st:stage.scrollTop,id:e.pointerId};
-  stage.setPointerCapture(e.pointerId); stage.classList.add('panning');});
-stage.addEventListener('pointermove',e=>{if(!pan)return; stage.scrollLeft=pan.sl-(e.clientX-pan.x); stage.scrollTop=pan.st-(e.clientY-pan.y);});
-function endPan(){if(!pan)return; try{stage.releasePointerCapture(pan.id);}catch(_){} pan=null; stage.classList.remove('panning');}
-stage.addEventListener('pointerup',e=>{if(e.button===1)endPan();});
-stage.addEventListener('pointercancel',endPan);
-stage.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
-stage.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
-document.getElementById('zin').onclick=()=>zoomAt(1.25,window.innerWidth/2,window.innerHeight/2);
-document.getElementById('zout').onclick=()=>zoomAt(1/1.25,window.innerWidth/2,window.innerHeight/2);
+// view: screen = translate(tx,ty) * scale(k) * content
+let k=1, tx=0, ty=0;
+function applyView(){ viewport.setAttribute('transform',`translate(${tx.toFixed(2)},${ty.toFixed(2)}) scale(${k})`); }
+function fit(){ const sw=stage.clientWidth||1, sh=stage.clientHeight||1; k=Math.min(sw/VW,sh/VH)*0.95||1; tx=(sw-VW*k)/2; ty=(sh-VH*k)/2; applyView(); }
+function zoomAt(factor,cxClient,cyClient){ const r=stage.getBoundingClientRect(); const mx=cxClient-r.left,my=cyClient-r.top;
+  const ux=(mx-tx)/k, uy=(my-ty)/k; k=Math.min(Math.max(k*factor,0.02),8); tx=mx-ux*k; ty=my-uy*k; applyView(); }
+function focusTable(n){ const t=T[n], sw=stage.clientWidth, sh=stage.clientHeight; tx=sw/2-(t.x+t.w/2)*k; ty=sh/2-(t.y+t.h/2)*k; applyView(); }
+stage.addEventListener('wheel',e=>{ e.preventDefault(); zoomAt(Math.exp((e.deltaY<0?1:-1)*0.12),e.clientX,e.clientY); },{passive:false});
+let editMode=false, drag=null, panning=null, panCand=null, dragMoved=false, downOnTable=false;
+document.getElementById('edit').addEventListener('change',e=>{editMode=e.target.checked; document.body.classList.toggle('edit',editMode);});
+svg.addEventListener('pointerdown',e=>{ dragMoved=false; const g=e.target.closest('g.table'); downOnTable=!!g;
+  if(editMode&&e.button===0&&g){ const n=g.getAttribute('data-table'); drag={n,sx:e.clientX,sy:e.clientY,x0:T[n].x,y0:T[n].y};
+    try{svg.setPointerCapture(e.pointerId);}catch(_){} e.preventDefault(); return; }
+  if(e.button===1||(e.button===0&&!g)){ panCand={sx:e.clientX,sy:e.clientY,tx0:tx,ty0:ty,id:e.pointerId,btn:e.button}; if(e.button===1)e.preventDefault(); }
+});
+svg.addEventListener('pointermove',e=>{
+  if(drag){ const dx=(e.clientX-drag.sx)/k,dy=(e.clientY-drag.sy)/k; if(Math.abs(dx)+Math.abs(dy)>2/k)dragMoved=true;
+    const t=T[drag.n]; t.x=drag.x0+dx; t.y=drag.y0+dy; t.el.setAttribute('transform',`translate(${t.x.toFixed(1)},${t.y.toFixed(1)})`);
+    DATA.rels.forEach(r=>{if(r.f===drag.n||r.t===drag.n)drawRel(r);}); return; }
+  if(panCand&&!panning){ if(Math.abs(e.clientX-panCand.sx)+Math.abs(e.clientY-panCand.sy)>4){ panning=panCand; dragMoved=true; try{svg.setPointerCapture(panning.id);}catch(_){} stage.classList.add('panning'); } }
+  if(panning){ tx=panning.tx0+(e.clientX-panning.sx); ty=panning.ty0+(e.clientY-panning.sy); applyView(); }
+});
+function endInteraction(){ try{ if(panning) svg.releasePointerCapture(panning.id); }catch(_){} panning=null; panCand=null; drag=null; stage.classList.remove('panning'); }
+svg.addEventListener('pointerup',e=>{ const click=(e.button===0&&!dragMoved&&!downOnTable); endInteraction(); if(click&&lock){lock=null;clear();} });
+svg.addEventListener('pointercancel',endInteraction);
+svg.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
+svg.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
+function stageCenter(){ const r=stage.getBoundingClientRect(); return [r.left+r.width/2,r.top+r.height/2]; }
+document.getElementById('zin').onclick=()=>{const c=stageCenter(); zoomAt(1.25,c[0],c[1]);};
+document.getElementById('zout').onclick=()=>{const c=stageCenter(); zoomAt(1/1.25,c[0],c[1]);};
 document.getElementById('fit').onclick=fit;
 document.getElementById('reset').onclick=()=>{lock=null;clear();};
-function focusTable(n){const t=T[n]; stage.scrollTo({left:(t.x+t.w/2)*zoom-stage.clientWidth/2, top:(t.y+t.h/2)*zoom-stage.clientHeight/2, behavior:'smooth'});}
 document.getElementById('find').addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase(); if(!q)return;
   const hit=Object.keys(T).find(n=>n.toLowerCase().includes(q)); if(hit){lock=hit;highlight(hit);focusTable(hit);}});
-let editMode=false,dragMoved=false,drag=null;
-document.getElementById('edit').addEventListener('change',e=>{editMode=e.target.checked; document.body.classList.toggle('edit',editMode);});
-svg.addEventListener('pointerdown',e=>{if(!editMode||e.button!==0)return; const g=e.target.closest('g.table'); if(!g)return;
-  const n=g.getAttribute('data-table'); drag={n,sx:e.clientX,sy:e.clientY,x0:T[n].x,y0:T[n].y}; dragMoved=false; g.setPointerCapture(e.pointerId); e.preventDefault();});
-svg.addEventListener('pointermove',e=>{if(!drag)return; const dx=(e.clientX-drag.sx)/zoom,dy=(e.clientY-drag.sy)/zoom;
-  if(Math.abs(dx)+Math.abs(dy)>2)dragMoved=true; const t=T[drag.n]; t.x=drag.x0+dx; t.y=drag.y0+dy;
-  t.el.setAttribute('transform',`translate(${t.x.toFixed(1)},${t.y.toFixed(1)})`);
-  DATA.rels.forEach(r=>{if(r.f===drag.n||r.t===drag.n)drawRel(r);});});
-svg.addEventListener('pointerup',()=>{drag=null; setTimeout(()=>dragMoved=false,0);});
 document.getElementById('save').onclick=()=>{lock=null;clear();
-  const s='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(svg);
+  const clone=svg.cloneNode(true); clone.setAttribute('viewBox',`0 0 ${VW} ${VH}`); clone.setAttribute('width',VW); clone.setAttribute('height',VH);
+  const vp=clone.querySelector('#viewport'); if(vp) vp.removeAttribute('transform');
+  const s='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(clone);
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'})); a.download='__TITLE___untangled.svg'; a.click();};
 fit();
 </script>
