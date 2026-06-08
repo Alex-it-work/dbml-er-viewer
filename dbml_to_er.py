@@ -460,7 +460,9 @@ HTML_TPL = r'''<!DOCTYPE html>
   #bar label{ display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
   #bar .sep{ flex:1; }
   #hint{ color:#888; font-size:12px; }
-  #stage{ position:absolute; top:46px; left:0; right:280px; bottom:0; overflow:auto; }
+  #stage{ position:absolute; top:46px; left:0; right:280px; bottom:0; overflow:hidden; touch-action:none; }
+  #stage.panning{ cursor:grabbing; }
+  #stage.panning *{ pointer-events:none; }
   #side{ position:absolute; top:46px; right:0; bottom:0; width:280px; background:var(--bar); border-left:1px solid var(--line); overflow:auto; padding:12px; font-size:13px; }
   #side h3{ margin:0 0 6px; font-size:14px; color:#fff; word-break:break-all; }
   #side .meta{ color:#888; font-size:12px; margin-bottom:10px; }
@@ -488,7 +490,7 @@ HTML_TPL = r'''<!DOCTYPE html>
   <label><input type="checkbox" id="edit"> Edit</label>
   <button id="save">Export SVG</button>
   <span class="sep"></span>
-  <span id="hint">click a table to highlight its relationships</span>
+  <span id="hint">wheel: zoom · middle-drag: pan · click a table to highlight</span>
 </div>
 <div id="stage">
   <svg id="svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 __VW__ __VH__" width="__VW__" height="__VH__">
@@ -574,9 +576,25 @@ function panel(name){
 }
 let zoom=1;
 function applyZoom(){svg.setAttribute('width',(VW*zoom).toFixed(0)); svg.setAttribute('height',(VH*zoom).toFixed(0));}
-function fit(){zoom=Math.max(Math.min(stage.clientWidth/VW,stage.clientHeight/VH)*0.98,0.05); applyZoom();}
-document.getElementById('zin').onclick=()=>{zoom=Math.min(zoom*1.25,4);applyZoom();};
-document.getElementById('zout').onclick=()=>{zoom=Math.max(zoom/1.25,0.05);applyZoom();};
+function setZoom(z){zoom=Math.min(Math.max(z,0.02),6); applyZoom();}
+function fit(){setZoom(Math.min(stage.clientWidth/VW,stage.clientHeight/VH)*0.98);}
+function zoomAt(factor,cxClient,cyClient){const rect=stage.getBoundingClientRect();
+  const mx=cxClient-rect.left,my=cyClient-rect.top;
+  const lx=(stage.scrollLeft+mx)/zoom, ly=(stage.scrollTop+my)/zoom;
+  setZoom(zoom*factor); stage.scrollLeft=lx*zoom-mx; stage.scrollTop=ly*zoom-my;}
+stage.addEventListener('wheel',e=>{e.preventDefault(); zoomAt(Math.exp((e.deltaY<0?1:-1)*0.12),e.clientX,e.clientY);},{passive:false});
+let pan=null;
+stage.addEventListener('pointerdown',e=>{if(e.button!==1)return; e.preventDefault();
+  pan={x:e.clientX,y:e.clientY,sl:stage.scrollLeft,st:stage.scrollTop,id:e.pointerId};
+  stage.setPointerCapture(e.pointerId); stage.classList.add('panning');});
+stage.addEventListener('pointermove',e=>{if(!pan)return; stage.scrollLeft=pan.sl-(e.clientX-pan.x); stage.scrollTop=pan.st-(e.clientY-pan.y);});
+function endPan(){if(!pan)return; try{stage.releasePointerCapture(pan.id);}catch(_){} pan=null; stage.classList.remove('panning');}
+stage.addEventListener('pointerup',e=>{if(e.button===1)endPan();});
+stage.addEventListener('pointercancel',endPan);
+stage.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
+stage.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
+document.getElementById('zin').onclick=()=>zoomAt(1.25,window.innerWidth/2,window.innerHeight/2);
+document.getElementById('zout').onclick=()=>zoomAt(1/1.25,window.innerWidth/2,window.innerHeight/2);
 document.getElementById('fit').onclick=fit;
 document.getElementById('reset').onclick=()=>{lock=null;clear();};
 function focusTable(n){const t=T[n]; stage.scrollTo({left:(t.x+t.w/2)*zoom-stage.clientWidth/2, top:(t.y+t.h/2)*zoom-stage.clientHeight/2, behavior:'smooth'});}
@@ -584,7 +602,7 @@ document.getElementById('find').addEventListener('input',e=>{const q=e.target.va
   const hit=Object.keys(T).find(n=>n.toLowerCase().includes(q)); if(hit){lock=hit;highlight(hit);focusTable(hit);}});
 let editMode=false,dragMoved=false,drag=null;
 document.getElementById('edit').addEventListener('change',e=>{editMode=e.target.checked; document.body.classList.toggle('edit',editMode);});
-svg.addEventListener('pointerdown',e=>{if(!editMode)return; const g=e.target.closest('g.table'); if(!g)return;
+svg.addEventListener('pointerdown',e=>{if(!editMode||e.button!==0)return; const g=e.target.closest('g.table'); if(!g)return;
   const n=g.getAttribute('data-table'); drag={n,sx:e.clientX,sy:e.clientY,x0:T[n].x,y0:T[n].y}; dragMoved=false; g.setPointerCapture(e.pointerId); e.preventDefault();});
 svg.addEventListener('pointermove',e=>{if(!drag)return; const dx=(e.clientX-drag.sx)/zoom,dy=(e.clientY-drag.sy)/zoom;
   if(Math.abs(dx)+Math.abs(dy)>2)dragMoved=true; const t=T[drag.n]; t.x=drag.x0+dx; t.y=drag.y0+dy;

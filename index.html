@@ -16,7 +16,9 @@
   #bar label{ display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
   #bar .sep{ flex:1; }
   #hint{ color:#888; font-size:12px; }
-  #stage{ position:absolute; top:46px; left:0; right:280px; bottom:0; overflow:auto; }
+  #stage{ position:absolute; top:46px; left:0; right:280px; bottom:0; overflow:hidden; touch-action:none; }
+  #stage.panning{ cursor:grabbing; }
+  #stage.panning *{ pointer-events:none; }
   #side{ position:absolute; top:46px; right:0; bottom:0; width:280px; background:var(--bar); border-left:1px solid var(--line); overflow:auto; padding:12px; font-size:13px; }
   #side h3{ margin:0 0 6px; font-size:14px; color:#fff; word-break:break-all; }
   #side .meta{ color:#888; font-size:12px; margin-bottom:10px; }
@@ -61,7 +63,7 @@
   <label><input type="checkbox" id="edit"> Edit</label>
   <button id="save">Export SVG</button>
   <span class="sep"></span>
-  <span id="hint">drag a .dbml file anywhere · click a table to highlight links</span>
+  <span id="hint">wheel: zoom · middle-drag: pan · click a table to highlight · drop a .dbml anywhere</span>
 </div>
 
 <div id="stage">
@@ -203,7 +205,6 @@ function computeLayout(order, tables, refs, seeds){
   const side=Math.sqrt(totalArea)*1.5;
   const GAP_X=130, PAD_X=90, PAD_Y=46, MX=80, MY=40;
   let cx={}, cy={}, rng=Math.random;
-  // adaptive iteration budget for big schemas
   const iters = connected.length>120 ? 600 : 1400;
 
   function repel(temp){
@@ -314,7 +315,10 @@ function txt(parent,s,a){ const e=el('text',a,parent); e.textContent=s; return e
 
 let T={}, ADJ={}, RELS=[], lock=null, zoom=1, CW=100, CH=100, MODEL=null;
 
-function fkSet(refs){ const s=new Set(); refs.forEach(([f,fc,t,tc])=>{ s.add(f+' '+fc); s.add(t+' '+tc); }); return s; }
+// fk lookup: table -> Set(columns that take part in a relationship)
+function fkMap(refs){ const m={}; const add=(t,c)=>{ (m[t]||(m[t]=new Set())).add(c); };
+  refs.forEach(([f,fc,t,tc])=>{ add(f,fc); add(t,tc); }); return m; }
+const isFK=(fks,name,col)=> !!(fks[name] && fks[name].has(col));
 
 function buildTable(name, cols, x, y, fks){
   const h=tableHeight(cols.length);
@@ -327,7 +331,7 @@ function buildTable(name, cols, x, y, fks){
     if(i%2===1) el('rect',{x:2,y:by-15,width:W_TABLE-4,height:ROW_H,fill:'rgba(255,255,255,0.02)',rx:2},g);
     const cg=el('g',{class:'column','data-table':name,'data-column':c.col},g);
     if(c.pk){ txt(cg,'PK',{x:10,y:by,class:'pk-icon'}); txt(cg,c.col,{x:30,y:by,class:'column-name'}); }
-    else if(fks.has(name+' '+c.col)){ txt(cg,'🔗',{x:10,y:by,class:'fk-icon'}); txt(cg,c.col,{x:28,y:by,class:'column-name'}); }
+    else if(isFK(fks,name,c.col)){ txt(cg,'🔗',{x:10,y:by,class:'fk-icon'}); txt(cg,c.col,{x:28,y:by,class:'column-name'}); }
     else txt(cg,c.col,{x:14,y:by,class:'column-name'});
     if(c.type) txt(cg,c.type,{x:W_TABLE-10,y:by,'text-anchor':'end',class:'column-type'});
     if(i<cols.length-1) el('line',{x1:8,y1:by+12,x2:W_TABLE-8,y2:by+12,stroke:'rgba(255,255,255,0.05)','stroke-width':1},g);
@@ -355,14 +359,14 @@ function render(model){
   MODEL=model; CW=model.cw; CH=model.ch; lock=null;
   relsLayer.textContent=''; tablesLayer.textContent='';
   svg.setAttribute('viewBox',`0 0 ${CW} ${CH}`);
-  const fks=fkSet(model.refsRaw);
+  const fks=fkMap(model.refsRaw);
   T={}; ADJ={}; RELS=[];
   model.order.forEach(n=>{ const g=buildTable(n,model.tables[n],model.x[n],model.y[n],fks);
     T[n]={name:n,x:model.x[n],y:model.y[n],w:model.W[n],h:model.H[n],el:g}; ADJ[n]=new Set(); });
   // table interactions
   model.order.forEach(n=>{ const e=T[n].el;
-    e.addEventListener('mouseenter',()=>{ if(!lock) highlight(n); });
-    e.addEventListener('mouseleave',()=>{ if(!lock) clear(); });
+    e.addEventListener('mouseenter',()=>{ if(!lock && !pan) highlight(n); });
+    e.addEventListener('mouseleave',()=>{ if(!lock && !pan) clear(); });
     e.addEventListener('click',ev=>{ if(dragMoved) return; ev.stopPropagation();
       if(lock===n){lock=null;clear();} else {lock=n;highlight(n);} });
   });
@@ -376,8 +380,8 @@ function render(model){
     const tb=el('rect',{width:24,height:20,rx:4,fill:'#2a2a2a',stroke:'#64b5f6','stroke-width':1,opacity:.9},g);
     const tt=txt(g,e.tc,{'text-anchor':'middle',class:'cardinality-label',fill:'#64b5f6'});
     const r=Object.assign({},e,{_g:{g,vis,hit,fb,ft,tb,tt}}); RELS.push(r);
-    g.addEventListener('mouseenter',()=>{ if(!lock) hot(new Set([e.f,e.t]),x=>x===r); });
-    g.addEventListener('mouseleave',()=>{ if(!lock) clear(); });
+    g.addEventListener('mouseenter',()=>{ if(!lock && !pan) hot(new Set([e.f,e.t]),x=>x===r); });
+    g.addEventListener('mouseleave',()=>{ if(!lock && !pan) clear(); });
   });
   RELS.forEach(drawRel);
   resetPanel();
@@ -414,22 +418,50 @@ function panel(name){
   sList.querySelectorAll('a[data-go]').forEach(a=>a.addEventListener('click',ev=>{ ev.stopPropagation(); const g=a.getAttribute('data-go'); lock=g; highlight(g); focusTable(g); }));
 }
 
-// ---------- zoom / fit / find ----------
+// ---------- zoom / fit / pan / find ----------
 function applyZoom(){ svg.setAttribute('width',(CW*zoom).toFixed(0)); svg.setAttribute('height',(CH*zoom).toFixed(0)); }
-function fit(){ zoom=Math.max(Math.min(stage.clientWidth/CW,stage.clientHeight/CH)*0.98,0.03); applyZoom(); }
+function setZoom(z){ zoom=Math.min(Math.max(z,0.02),6); applyZoom(); }
+function fit(){ setZoom(Math.min(stage.clientWidth/CW,stage.clientHeight/CH)*0.98); }
+function zoomAt(factor, cxClient, cyClient){
+  const rect=stage.getBoundingClientRect();
+  const mx=cxClient-rect.left, my=cyClient-rect.top;
+  const lx=(stage.scrollLeft+mx)/zoom, ly=(stage.scrollTop+my)/zoom;   // logical point under cursor
+  setZoom(zoom*factor);
+  stage.scrollLeft=lx*zoom-mx;
+  stage.scrollTop =ly*zoom-my;
+}
 function focusTable(n){ const t=T[n]; stage.scrollTo({left:(t.x+t.w/2)*zoom-stage.clientWidth/2, top:(t.y+t.h/2)*zoom-stage.clientHeight/2, behavior:'smooth'}); }
-document.getElementById('zin').onclick=()=>{ zoom=Math.min(zoom*1.25,4); applyZoom(); };
-document.getElementById('zout').onclick=()=>{ zoom=Math.max(zoom/1.25,0.03); applyZoom(); };
+
+// wheel = zoom centred on the cursor
+stage.addEventListener('wheel',e=>{ e.preventDefault();
+  zoomAt(Math.exp((e.deltaY<0?1:-1)*0.12), e.clientX, e.clientY);
+},{passive:false});
+
+// middle-button drag = pan (no scrollbars)
+let pan=null;
+stage.addEventListener('pointerdown',e=>{ if(e.button!==1) return; e.preventDefault();
+  pan={x:e.clientX,y:e.clientY,sl:stage.scrollLeft,st:stage.scrollTop,id:e.pointerId};
+  stage.setPointerCapture(e.pointerId); stage.classList.add('panning'); });
+stage.addEventListener('pointermove',e=>{ if(!pan) return;
+  stage.scrollLeft=pan.sl-(e.clientX-pan.x); stage.scrollTop=pan.st-(e.clientY-pan.y); });
+function endPan(){ if(!pan) return; try{ stage.releasePointerCapture(pan.id); }catch(_){} pan=null; stage.classList.remove('panning'); }
+stage.addEventListener('pointerup',e=>{ if(e.button===1) endPan(); });
+stage.addEventListener('pointercancel',endPan);
+stage.addEventListener('mousedown',e=>{ if(e.button===1) e.preventDefault(); });   // kill middle-click autoscroll
+stage.addEventListener('auxclick',e=>{ if(e.button===1) e.preventDefault(); });
+
+document.getElementById('zin').onclick=()=>zoomAt(1.25, window.innerWidth/2, window.innerHeight/2);
+document.getElementById('zout').onclick=()=>zoomAt(1/1.25, window.innerWidth/2, window.innerHeight/2);
 document.getElementById('fit').onclick=fit;
 document.getElementById('reset').onclick=()=>{ lock=null; clear(); };
 document.getElementById('find').addEventListener('input',e=>{ const q=e.target.value.trim().toLowerCase(); if(!q||!MODEL)return;
   const hit=MODEL.order.find(n=>n.toLowerCase().includes(q)); if(hit){ lock=hit; highlight(hit); focusTable(hit); } });
 stage.addEventListener('click',()=>{ if(lock){ lock=null; clear(); } });
 
-// ---------- edit / drag ----------
+// ---------- edit / drag tables (left button only) ----------
 let editMode=false,dragMoved=false,drag=null;
 document.getElementById('edit').addEventListener('change',e=>{ editMode=e.target.checked; document.body.classList.toggle('edit',editMode); });
-svg.addEventListener('pointerdown',e=>{ if(!editMode)return; const g=e.target.closest('g.table'); if(!g)return;
+svg.addEventListener('pointerdown',e=>{ if(!editMode||e.button!==0)return; const g=e.target.closest('g.table'); if(!g)return;
   const n=g.getAttribute('data-table'); drag={n,sx:e.clientX,sy:e.clientY,x0:T[n].x,y0:T[n].y}; dragMoved=false; g.setPointerCapture(e.pointerId); e.preventDefault(); });
 svg.addEventListener('pointermove',e=>{ if(!drag)return; const dx=(e.clientX-drag.sx)/zoom,dy=(e.clientY-drag.sy)/zoom;
   if(Math.abs(dx)+Math.abs(dy)>2)dragMoved=true; const t=T[drag.n]; t.x=drag.x0+dx; t.y=drag.y0+dy;
@@ -463,7 +495,6 @@ function decodeBuffer(buf){
   if(b[0]===0xFF&&b[1]===0xFE) return new TextDecoder('utf-16le').decode(buf);
   if(b[0]===0xFE&&b[1]===0xFF) return new TextDecoder('utf-16be').decode(buf);
   if(b[0]===0xEF&&b[1]===0xBB&&b[2]===0xBF) return new TextDecoder('utf-8').decode(buf);
-  // heuristic: lots of NUL -> utf-16le without BOM
   let nul=0; for(let i=0;i<Math.min(b.length,400);i++) if(b[i]===0) nul++;
   if(nul>40) return new TextDecoder('utf-16le').decode(buf);
   return new TextDecoder('utf-8').decode(buf);
