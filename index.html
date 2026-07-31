@@ -14,6 +14,7 @@
   #bar button:hover{ background:#3d3d3d; }
   #bar button.primary{ background:#2d5a86; border-color:#356; }
   #bar label{ display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
+  #bar select{ background:#1b1b1b; border:1px solid var(--line); color:#ddd; border-radius:6px; padding:4px 6px; outline:none; }
   #bar .sep{ flex:1; }
   #hint{ color:#888; font-size:12px; }
   #stage{ position:absolute; top:46px; left:0; right:280px; bottom:0; overflow:hidden; touch-action:none; cursor:grab; }
@@ -55,16 +56,22 @@
 <div id="bar">
   <strong style="color:#fff">DBML&nbsp;ER</strong>
   <button id="open" class="primary">Open .dbml</button>
+  <button id="add" title="Merge another .dbml into the current schema (later file wins)">+ Add .dbml</button>
   <button id="sample">Load sample</button>
-  <input id="file" type="file" accept=".dbml,.txt" style="display:none">
+  <input id="file" type="file" accept=".dbml,.txt" multiple style="display:none">
+  <input id="file2" type="file" accept=".dbml,.txt" multiple style="display:none">
   <input id="find" type="search" placeholder="find table…" autocomplete="off">
   <button id="zin">+</button><button id="zout">&minus;</button><button id="fit">Fit</button>
   <span id="zlabel" style="color:#888; min-width:42px; text-align:center;">100%</span>
   <button id="reset">Clear</button>
   <label><input type="checkbox" id="edit"> Edit</label>
+  <label title="Snap tables to a grid while dragging">Snap
+    <select id="snap"><option value="0">off</option><option value="10">10</option><option value="20" selected>20</option><option value="26">26</option><option value="50">50</option></select>
+  </label>
+  <button id="relayout" title="Recompute the whole layout from scratch">Re-layout</button>
   <button id="save">Export SVG</button>
   <span class="sep"></span>
-  <span id="hint">wheel: zoom · drag: pan · click a table to highlight · drop a .dbml anywhere</span>
+  <span id="hint">wheel: zoom · drag: pan · click a table to highlight · drop .dbml (Shift = merge)</span>
 </div>
 
 <div id="stage">
@@ -73,15 +80,19 @@
       <marker id="many-crow" markerWidth="20" markerHeight="20" refX="18" refY="10" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,10 L18,2 M0,10 L18,10 M0,10 L18,18" stroke="#64b5f6" stroke-width="2" fill="none" stroke-linecap="round"/></marker>
       <marker id="one-line" markerWidth="16" markerHeight="20" refX="14" refY="10" orient="auto" markerUnits="userSpaceOnUse"><line x1="4" y1="2" x2="4" y2="18" stroke="#64b5f6" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="2" x2="12" y2="18" stroke="#64b5f6" stroke-width="2.5" stroke-linecap="round"/></marker>
       <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/></filter>
+      <pattern id="gridpat" width="20" height="20" patternUnits="userSpaceOnUse">
+        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="1"/>
+      </pattern>
     </defs>
     <rect id="bg" width="100%" height="100%" fill="#1e1e1e"/>
     <g id="viewport">
+      <rect id="gridrect" x="0" y="0" width="0" height="0" fill="url(#gridpat)" style="display:none" pointer-events="none"/>
       <g class="relationships-layer"></g>
       <g class="tables-layer"></g>
     </g>
   </svg>
 </div>
-<div id="drop"><div class="box"><b>Drop a .dbml file here</b><br>or use “Open .dbml”. Everything runs in your browser — no upload, no Python.</div></div>
+<div id="drop"><div class="box"><b>Drop a .dbml file here</b><br>or use “Open .dbml”. Drop several files (or “+ Add .dbml”) to merge schemas — the later file wins.<br>Everything runs in your browser — no upload, no Python.</div></div>
 <div id="side">
   <h3 id="s-title">No schema loaded</h3>
   <div class="meta" id="s-meta">Open or drop a .dbml file, or load the sample.</div>
@@ -179,14 +190,17 @@ function parseDBML(text){
       continue;
     }
   }
-  const valid=refs.filter(r=> (r[0] in tables) && (r[2] in tables));
-  return {order,tables,refs:valid};
+  // refs are returned unfiltered: a ref may point at a table that only exists in
+  // another .dbml, and it comes alive once that file is merged in.
+  return {order,tables,refs};
 }
 
 // ================= LAYOUT (ported from the Python tool) =================
 function mulberry32(seed){ let a=seed>>>0; return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
-function computeLayout(order, tables, refs, seeds){
+// fixedPos: {name:{x,y}} - tables that keep their current spot (merge / manual moves).
+// Only tables without a fixed position are placed by the force pass.
+function computeLayout(order, tables, refs, seeds, fixedPos){
   const W={}, H={}, colIndex={};
   order.forEach(n=>{ W[n]=W_TABLE; H[n]=tableHeight(tables[n].length);
     const m={}; tables[n].forEach((c,idx)=>m[c.col]=idx); colIndex[n]=m; });
@@ -210,6 +224,12 @@ function computeLayout(order, tables, refs, seeds){
   const GAP_X=130, PAD_X=90, PAD_Y=46, MX=80, MY=40;
   let cx={}, cy={}, rng=Math.random;
   const iters = connected.length>120 ? 600 : 1400;
+
+  const FIX=fixedPos||{};
+  const FIXED=new Set(order.filter(n=>FIX[n]));      // pinned tables
+  const NEW=connected.filter(n=>!FIXED.has(n));      // tables to place
+  const NB={}; order.forEach(n=>NB[n]=[]);
+  E.forEach(e=>{ NB[e.f].push(e.t); NB[e.t].push(e.f); });
 
   function repel(temp){
     const fx={}, fy={}; connected.forEach(n=>{fx[n]=0;fy[n]=0;});
@@ -245,9 +265,13 @@ function computeLayout(order, tables, refs, seeds){
         for(let b=a+1;b<cl.length;b++){ const nb=cl[b];
           const dx=cx[na]-cx[nb], dy=cy[na]-cy[nb];
           const ox=(W[na]+W[nb])/2+MX-Math.abs(dx), oy=(H[na]+H[nb])/2+MY-Math.abs(dy);
-          if(ox>0&&oy>0){ moved=true;
-            if(ox<oy){ const sh=ox/2*(dx>=0?1:-1); cx[na]+=sh; cx[nb]-=sh; }
-            else     { const sh=oy/2*(dy>=0?1:-1); cy[na]+=sh; cy[nb]-=sh; }
+          if(ox>0&&oy>0){
+            const fa=FIXED.has(na), fb=FIXED.has(nb);
+            if(fa&&fb) continue;                       // both pinned: leave them be
+            moved=true;
+            const sa=fa?0:(fb?1:0.5), sb=fb?0:(fa?1:0.5);   // pinned side doesn't move
+            if(ox<oy){ const s=ox*(dx>=0?1:-1); cx[na]+=s*sa; cx[nb]-=s*sb; }
+            else     { const s=oy*(dy>=0?1:-1); cy[na]+=s*sa; cy[nb]-=s*sb; }
           }
         }
       }
@@ -274,11 +298,20 @@ function computeLayout(order, tables, refs, seeds){
   }
   function run(seed){
     rng=mulberry32(seed+1);
-    connected.forEach(n=>{ cx[n]=rng()*side; cy[n]=rng()*side; });
+    // pinned tables sit where they already are; new ones start near their
+    // pinned neighbours (so a merged table lands next to what it links to)
+    FIXED.forEach(n=>{ cx[n]=FIX[n].x+W[n]/2; cy[n]=FIX[n].y+H[n]/2; });
+    NEW.forEach(n=>{
+      const anchors=NB[n].filter(m=>FIXED.has(m));
+      if(anchors.length){
+        let sx=0,sy=0; anchors.forEach(m=>{ sx+=FIX[m].x+W[m]/2; sy+=FIX[m].y+H[m]/2; });
+        cx[n]=sx/anchors.length+(rng()-0.5)*600; cy[n]=sy/anchors.length+(rng()-0.5)*600;
+      } else { cx[n]=rng()*side; cy[n]=rng()*side; }
+    });
     let temp=side*0.1;
     for(let it=0;it<iters;it++){
       const [fx,fy]=repel(temp); attract(fx,fy);
-      connected.forEach(n=>{ let dx=fx[n],dy=fy[n]; const d=Math.hypot(dx,dy);
+      NEW.forEach(n=>{ let dx=fx[n],dy=fy[n]; const d=Math.hypot(dx,dy);
         if(d>temp){ dx*=temp/d; dy*=temp/d; } cx[n]+=dx; cy[n]+=dy; });
       temp=Math.max(temp*0.997,8);
     }
@@ -288,22 +321,27 @@ function computeLayout(order, tables, refs, seeds){
 
   let best=null;
   if(connected.length){
-    for(let s=0;s<seeds;s++){ const [c,L]=run(s);
+    const tries=NEW.length?seeds:1;                  // nothing new to place -> one pass
+    for(let s=0;s<tries;s++){ const [c,L]=run(s);
       if(!best||c<best.c||(c===best.c&&L<best.L)) best={c,L,cx:Object.assign({},cx),cy:Object.assign({},cy)}; }
     cx=best.cx; cy=best.cy;
   }
 
   const x={}, y={};
   connected.forEach(n=>{ x[n]=cx[n]-W[n]/2; y[n]=cy[n]-H[n]/2; });
+  const isoFixed=isolated.filter(n=>FIXED.has(n)), isoNew=isolated.filter(n=>!FIXED.has(n));
+  isoFixed.forEach(n=>{ x[n]=FIX[n].x; y[n]=FIX[n].y; });
+  const placed=connected.concat(isoFixed);
   let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
-  connected.forEach(n=>{ minx=Math.min(minx,x[n]); miny=Math.min(miny,y[n]); maxx=Math.max(maxx,x[n]+W[n]); maxy=Math.max(maxy,y[n]+H[n]); });
-  if(!connected.length){ minx=miny=0; maxx=maxy=side; }
+  placed.forEach(n=>{ minx=Math.min(minx,x[n]); miny=Math.min(miny,y[n]); maxx=Math.max(maxx,x[n]+W[n]); maxy=Math.max(maxy,y[n]+H[n]); });
+  if(!placed.length){ minx=miny=0; maxx=maxy=side; }
   const M=80;
-  connected.forEach(n=>{ x[n]+=M-minx; y[n]+=M-miny; });
+  // shift everything together: relative arrangement (incl. pinned tables) is preserved
+  placed.forEach(n=>{ x[n]+=M-minx; y[n]+=M-miny; });
   maxx+=M-minx; maxy+=M-miny;
 
   let iy=maxy+160, ix=M, rowH=0, contentW=Math.max(maxx+M, side);
-  isolated.forEach(n=>{ if(ix+W[n]>contentW){ ix=M; iy+=rowH+80; rowH=0; } x[n]=ix; y[n]=iy; ix+=W[n]+80; rowH=Math.max(rowH,H[n]); });
+  isoNew.forEach(n=>{ if(ix+W[n]>contentW){ ix=M; iy+=rowH+80; rowH=0; } x[n]=ix; y[n]=iy; ix+=W[n]+80; rowH=Math.max(rowH,H[n]); });
 
   let cw=0,ch=0; order.forEach(n=>{ cw=Math.max(cw,x[n]+W[n]); ch=Math.max(ch,y[n]+H[n]); });
   cw=Math.ceil(cw+M); ch=Math.ceil(ch+M);
@@ -318,6 +356,8 @@ function el(tag,a,parent){ const e=document.createElementNS(SVGNS,tag); if(a) fo
 function txt(parent,s,a){ const e=el('text',a,parent); e.textContent=s; return e; }
 
 let T={}, ADJ={}, RELS=[], lock=null, CW=100, CH=100, MODEL=null, gesture=null, suppressClick=false;
+// accumulated schema across merged files + last known position of every table
+let SCHEMA={order:[],tables:{},refs:[]}, POS={}, SOURCES=[];
 
 // fk lookup: table -> Set(columns that take part in a relationship)
 function fkMap(refs){ const m={}; const add=(t,c)=>{ (m[t]||(m[t]=new Set())).add(c); };
@@ -359,7 +399,7 @@ function drawRel(r){ const g=r._g,m=route(r); g.vis.setAttribute('d',m.d); g.hit
   g.fb.setAttribute('x',m.fbx);g.fb.setAttribute('y',m.fby);g.ft.setAttribute('x',m.ftx);g.ft.setAttribute('y',m.fty);
   g.tb.setAttribute('x',m.tbx);g.tb.setAttribute('y',m.tby);g.tt.setAttribute('x',m.ttx);g.tt.setAttribute('y',m.tty); }
 
-function render(model){
+function render(model, keepView){
   MODEL=model; CW=model.cw; CH=model.ch; lock=null;
   relsLayer.textContent=''; tablesLayer.textContent='';
   const fks=fkMap(model.refsRaw);
@@ -387,8 +427,10 @@ function render(model){
     g.addEventListener('mouseleave',()=>{ if(!lock && !gesture) clear(); });
   });
   RELS.forEach(drawRel);
+  POS={}; model.order.forEach(n=>{ POS[n]={x:model.x[n],y:model.y[n]}; });
+  updateGrid();
   resetPanel();
-  fit();
+  if(keepView) applyView(); else fit();
   document.getElementById('drop').style.display='none';
 }
 
@@ -447,7 +489,20 @@ stage.addEventListener('wheel',function(e){ e.preventDefault(); e.stopPropagatio
 // --- drag: pan (left on empty space / middle anywhere) or move a table (edit mode). ---
 // Listeners live on window so the gesture keeps working even when the cursor leaves the svg.
 let editMode=false;
-document.getElementById('edit').addEventListener('change',e=>{ editMode=e.target.checked; document.body.classList.toggle('edit',editMode); });
+const snapSel=document.getElementById('snap');
+const gridStep=()=>parseInt(snapSel.value,10)||0;
+const snapVal=v=>{ const g=gridStep(); return g?Math.round(v/g)*g:v; };
+// faint grid shown while editing, so manual placement lines up without fiddling
+function updateGrid(){
+  const g=gridStep(), r=document.getElementById('gridrect'), p=document.getElementById('gridpat');
+  if(!r||!p) return;
+  if(g){ p.setAttribute('width',g); p.setAttribute('height',g);
+    p.firstElementChild.setAttribute('d','M '+g+' 0 L 0 0 0 '+g); }
+  r.setAttribute('width',CW); r.setAttribute('height',CH);
+  r.style.display=(editMode&&g)?'':'none';
+}
+snapSel.addEventListener('change',updateGrid);
+document.getElementById('edit').addEventListener('change',e=>{ editMode=e.target.checked; document.body.classList.toggle('edit',editMode); updateGrid(); });
 
 function onGestureDown(e){
   if(e.button!==0 && e.button!==1) return;
@@ -469,8 +524,10 @@ function onGestureMove(e){
   const dx=e.clientX-gesture.sx, dy=e.clientY-gesture.sy;
   if(!gesture.moved && Math.abs(dx)+Math.abs(dy)>3){ gesture.moved=true; if(gesture.type==='pan') stage.classList.add('panning'); }
   if(gesture.type==='drag'){
-    const t=T[gesture.n]; t.x=gesture.x0+dx/k; t.y=gesture.y0+dy/k;
+    const t=T[gesture.n];
+    t.x=snapVal(gesture.x0+dx/k); t.y=snapVal(gesture.y0+dy/k);   // snap to the grid step
     t.el.setAttribute('transform','translate('+t.x.toFixed(1)+' '+t.y.toFixed(1)+')');
+    POS[gesture.n]={x:t.x,y:t.y};                                  // remember manual placement
     RELS.forEach(r=>{ if(r.f===gesture.n||r.t===gesture.n) drawRel(r); });
   } else {
     tx=gesture.tx0+dx; ty=gesture.ty0+dy; applyView();   // 1:1 hand pan
@@ -501,21 +558,56 @@ document.getElementById('save').onclick=()=>{ if(!MODEL)return; lock=null; clear
   const clone=svg.cloneNode(true);
   clone.setAttribute('viewBox',`0 0 ${CW} ${CH}`); clone.setAttribute('width',CW); clone.setAttribute('height',CH);
   const vp=clone.querySelector('#viewport'); if(vp) vp.removeAttribute('transform');
+  const gr=clone.querySelector('#gridrect'); if(gr) gr.remove();      // no editing grid in the export
   const s='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(clone);
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'})); a.download='diagram_untangled.svg'; a.click(); };
 
-// ---------- load a schema ----------
+// ---------- load / merge schemas ----------
 const busy=document.getElementById('busy');
-function loadText(text){
+const hintEl=document.getElementById('hint');
+const HINT_DEFAULT=hintEl.textContent;
+let hintTimer=null;
+function flash(msg){ hintEl.textContent=msg; hintEl.style.color='#ffd54f';
+  clearTimeout(hintTimer); hintTimer=setTimeout(()=>{ hintEl.textContent=HINT_DEFAULT; hintEl.style.color=''; },8000); }
+
+// Merge a parsed file into SCHEMA. Later file wins: a table redefined in a newer
+// file replaces the older definition; relationships are de-duplicated.
+function mergeInto(parsed, merge){
+  if(!merge){ SCHEMA={order:[],tables:{},refs:[]}; POS={}; SOURCES=[]; }
+  const added=[], updated=[];
+  parsed.order.forEach(n=>{
+    if(n in SCHEMA.tables) updated.push(n); else { SCHEMA.order.push(n); added.push(n); }
+    SCHEMA.tables[n]=parsed.tables[n];                       // newer definition wins
+  });
+  const key=r=>[r[0],r[1],r[2],r[3]].join('\u0001');   // from.col -> to.col
+  const seen=new Set(SCHEMA.refs.map(key));
+  let newRefs=0;
+  parsed.refs.forEach(r=>{ const k=key(r); if(!seen.has(k)){ seen.add(k); SCHEMA.refs.push(r); newRefs++; } });
+  return {added,updated,newRefs};
+}
+
+// Build the layout from SCHEMA. Tables already on screen keep their spot
+// (unless opts.relayout), so a merge only places the newcomers.
+function buildAndRender(opts){
+  opts=opts||{};
+  const tables=SCHEMA.tables;
+  const refs=SCHEMA.refs.filter(r=>(r[0] in tables)&&(r[2] in tables));
+  const seeds = SCHEMA.order.length>120 ? 4 : (SCHEMA.order.length>60 ? 8 : 14);
+  const model=computeLayout(SCHEMA.order, tables, refs, seeds, opts.relayout?null:POS);
+  model.refsRaw=refs;
+  render(model, opts.keepView);
+}
+
+function loadText(text, merge){
   busy.classList.add('on');
   setTimeout(()=>{
     try{
-      const {order,tables,refs}=parseDBML(text);
-      if(!order.length){ alert('No tables found — is this a DBML file?'); busy.classList.remove('on'); return; }
-      const seeds = order.length>120 ? 4 : (order.length>60 ? 8 : 14);
-      const model=computeLayout(order,tables,refs,seeds);
-      model.refsRaw=refs;
-      render(model);
+      const parsed=parseDBML(text);
+      if(!parsed.order.length){ alert('No tables found — is this a DBML file?'); busy.classList.remove('on'); return; }
+      const m = !!merge && SCHEMA.order.length>0;
+      const info=mergeInto(parsed,m);
+      buildAndRender({keepView:m});
+      if(m) flash('merged: +'+info.added.length+' new, '+info.updated.length+' updated, +'+info.newRefs+' refs');
     }catch(err){ alert('Failed to parse/render: '+err.message); console.error(err); }
     busy.classList.remove('on');
   },30);
@@ -529,16 +621,47 @@ function decodeBuffer(buf){
   if(nul>40) return new TextDecoder('utf-16le').decode(buf);
   return new TextDecoder('utf-8').decode(buf);
 }
-function loadFile(file){ const r=new FileReader(); r.onload=()=>loadText(decodeBuffer(r.result)); r.readAsArrayBuffer(file); }
+function readFile(f){ return new Promise((res,rej)=>{ const r=new FileReader();
+  r.onload=()=>res(decodeBuffer(r.result)); r.onerror=()=>rej(new Error('cannot read '+f.name)); r.readAsArrayBuffer(f); }); }
+
+// Load one or more files. merge=false -> the first file replaces the schema;
+// every following file (and everything when merge=true) is merged in, later wins.
+function loadFiles(list, merge){
+  const files=Array.prototype.slice.call(list||[]);
+  if(!files.length) return;
+  busy.classList.add('on');
+  setTimeout(async ()=>{
+    let added=0, updated=0, newRefs=0, didMerge=false;
+    try{
+      for(let i=0;i<files.length;i++){
+        const text=await readFile(files[i]);
+        const parsed=parseDBML(text);
+        if(!parsed.order.length){ alert('No tables found in '+files[i].name+' — skipped.'); continue; }
+        const m=(merge||i>0) && SCHEMA.order.length>0;
+        didMerge=didMerge||m;
+        const info=mergeInto(parsed,m);
+        added+=info.added.length; updated+=info.updated.length; newRefs+=info.newRefs;
+        SOURCES.push(files[i].name);
+      }
+      buildAndRender({keepView:didMerge});
+      if(didMerge) flash('merged: +'+added+' new, '+updated+' updated, +'+newRefs+' refs');
+    }catch(err){ alert('Failed: '+err.message); console.error(err); }
+    busy.classList.remove('on');
+  },30);
+}
 
 document.getElementById('open').onclick=()=>document.getElementById('file').click();
-document.getElementById('file').addEventListener('change',e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+document.getElementById('add').onclick=()=>document.getElementById('file2').click();
+document.getElementById('file').addEventListener('change',e=>{ loadFiles(e.target.files,false); e.target.value=''; });
+document.getElementById('file2').addEventListener('change',e=>{ loadFiles(e.target.files,true); e.target.value=''; });
 document.getElementById('sample').onclick=()=>loadText(SAMPLE_DBML);
+document.getElementById('relayout').onclick=()=>{ if(!MODEL)return; busy.classList.add('on');
+  setTimeout(()=>{ try{ buildAndRender({relayout:true}); }catch(err){ console.error(err); } busy.classList.remove('on'); },30); };
 
-// drag & drop anywhere
+// drag & drop anywhere (hold Shift to merge instead of replace)
 ['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{ e.preventDefault(); document.body.classList.add('dragover'); }));
 ['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{ e.preventDefault(); if(ev==='drop'||e.relatedTarget===null) document.body.classList.remove('dragover'); }));
-document.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
+document.addEventListener('drop',e=>{ loadFiles(e.dataTransfer.files, e.shiftKey); });
 
 // ---------- embedded sample ----------
 const SAMPLE_DBML=`// Sample e-commerce schema for dbml-er-viewer

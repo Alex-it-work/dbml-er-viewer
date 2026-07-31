@@ -172,12 +172,33 @@ def parse_dbml(text):
             tables[tname] = cols
             continue
 
-    # keep only refs whose endpoints are real tables; map cols -> index
-    valid = []
-    for ftab, fcol, ttab, tcol, fc, tc in refs:
-        if ftab in tables and ttab in tables:
-            valid.append((ftab, fcol, ttab, tcol, fc, tc))
-    return order, tables, valid
+    # refs are returned unfiltered: a ref may point at a table defined in another
+    # .dbml, and it comes alive once that file is merged in (see merge_files)
+    return order, tables, refs
+
+
+def merge_files(paths, quiet=False):
+    """Parse several .dbml files into one schema. Later files win: a table
+    redefined later replaces the earlier definition; refs are de-duplicated."""
+    order, tables, refs, seen = [], {}, [], set()
+    for path in paths:
+        o, t, r = parse_dbml(read_text(path))
+        added = updated = 0
+        for n in o:
+            if n in tables:
+                updated += 1
+            else:
+                order.append(n); added += 1
+            tables[n] = t[n]                     # newer definition wins
+        new_refs = 0
+        for ref in r:
+            key = ref[:4]
+            if key not in seen:
+                seen.add(key); refs.append(ref); new_refs += 1
+        if not quiet:
+            print(f"  {os.path.basename(path)}: +{added} new, {updated} updated, +{new_refs} refs")
+    refs = [r for r in refs if r[0] in tables and r[2] in tables]
+    return order, tables, refs
 
 # ----------------------------------------------------------------------------
 # layout (force-directed, multi-seed, pick fewest crossings)
@@ -415,6 +436,7 @@ DEFS = '''  <defs>
     <marker id="many-crow" markerWidth="20" markerHeight="20" refX="18" refY="10" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,10 L18,2 M0,10 L18,10 M0,10 L18,18" stroke="#64b5f6" stroke-width="2" fill="none" stroke-linecap="round"/></marker>
     <marker id="one-line" markerWidth="16" markerHeight="20" refX="14" refY="10" orient="auto" markerUnits="userSpaceOnUse"><line x1="4" y1="2" x2="4" y2="18" stroke="#64b5f6" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="2" x2="12" y2="18" stroke="#64b5f6" stroke-width="2.5" stroke-linecap="round"/></marker>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/></filter>
+    <pattern id="gridpat" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="1"/></pattern>
   </defs>'''
 
 def marker(card, end):
@@ -458,6 +480,7 @@ HTML_TPL = r'''<!DOCTYPE html>
   #bar button{ background:#333; border:1px solid var(--line); color:#ddd; border-radius:6px; padding:5px 10px; cursor:pointer; }
   #bar button:hover{ background:#3d3d3d; }
   #bar label{ display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
+  #bar select{ background:#1b1b1b; border:1px solid var(--line); color:#ddd; border-radius:6px; padding:4px 6px; outline:none; }
   #bar .sep{ flex:1; }
   #hint{ color:#888; font-size:12px; }
   #stage{ position:absolute; top:46px; left:0; right:280px; bottom:0; overflow:hidden; touch-action:none; cursor:grab; }
@@ -489,6 +512,9 @@ HTML_TPL = r'''<!DOCTYPE html>
   <span id="zlabel" style="color:#888; min-width:42px; text-align:center;">100%</span>
   <button id="reset">Clear</button>
   <label><input type="checkbox" id="edit"> Edit</label>
+  <label title="Snap tables to a grid while dragging">Snap
+    <select id="snap"><option value="0">off</option><option value="10">10</option><option value="20" selected>20</option><option value="26">26</option><option value="50">50</option></select>
+  </label>
   <button id="save">Export SVG</button>
   <span class="sep"></span>
   <span id="hint">wheel: zoom · drag: pan · click a table to highlight</span>
@@ -498,6 +524,7 @@ HTML_TPL = r'''<!DOCTYPE html>
 __DEFS__
     <rect id="bg" width="100%" height="100%" fill="#1e1e1e"/>
     <g id="viewport">
+      <rect id="gridrect" x="0" y="0" width="__VW__" height="__VH__" fill="url(#gridpat)" style="display:none" pointer-events="none"/>
       <g class="relationships-layer"></g>
       <g class="tables-layer">
 __TABLES__
@@ -588,7 +615,15 @@ function zoomAt(factor,cxClient,cyClient){ const r=stage.getBoundingClientRect()
 function focusTable(n){ const t=T[n], sw=stage.clientWidth, sh=stage.clientHeight; tx=sw/2-(t.x+t.w/2)*k; ty=sh/2-(t.y+t.h/2)*k; applyView(); }
 stage.addEventListener('wheel',function(e){ e.preventDefault(); e.stopPropagation(); zoomAt(e.deltaY<0?1.12:1/1.12,e.clientX,e.clientY); },{passive:false});
 let editMode=false;
-document.getElementById('edit').addEventListener('change',e=>{editMode=e.target.checked; document.body.classList.toggle('edit',editMode);});
+const snapSel=document.getElementById('snap');
+const gridStep=()=>parseInt(snapSel.value,10)||0;
+const snapVal=v=>{ const g=gridStep(); return g?Math.round(v/g)*g:v; };
+function updateGrid(){ const g=gridStep(), r=document.getElementById('gridrect'), p=document.getElementById('gridpat');
+  if(!r||!p) return;
+  if(g){ p.setAttribute('width',g); p.setAttribute('height',g); p.firstElementChild.setAttribute('d','M '+g+' 0 L 0 0 0 '+g); }
+  r.style.display=(editMode&&g)?'':'none'; }
+snapSel.addEventListener('change',updateGrid);
+document.getElementById('edit').addEventListener('change',e=>{editMode=e.target.checked; document.body.classList.toggle('edit',editMode); updateGrid();});
 function onGestureDown(e){
   if(e.button!==0 && e.button!==1) return;
   const tableEl=e.target.closest && e.target.closest('g.table');
@@ -605,7 +640,7 @@ function onGestureMove(e){
   if(!gesture) return;
   const dx=e.clientX-gesture.sx, dy=e.clientY-gesture.sy;
   if(!gesture.moved && Math.abs(dx)+Math.abs(dy)>3){ gesture.moved=true; if(gesture.type==='pan') stage.classList.add('panning'); }
-  if(gesture.type==='drag'){ const t=T[gesture.n]; t.x=gesture.x0+dx/k; t.y=gesture.y0+dy/k;
+  if(gesture.type==='drag'){ const t=T[gesture.n]; t.x=snapVal(gesture.x0+dx/k); t.y=snapVal(gesture.y0+dy/k);
     t.el.setAttribute('transform','translate('+t.x.toFixed(1)+' '+t.y.toFixed(1)+')');
     DATA.rels.forEach(r=>{if(r.f===gesture.n||r.t===gesture.n)drawRel(r);}); }
   else { tx=gesture.tx0+dx; ty=gesture.ty0+dy; applyView(); }
@@ -630,6 +665,7 @@ document.getElementById('find').addEventListener('input',e=>{const q=e.target.va
 document.getElementById('save').onclick=()=>{lock=null;clear();
   const clone=svg.cloneNode(true); clone.setAttribute('viewBox',`0 0 ${VW} ${VH}`); clone.setAttribute('width',VW); clone.setAttribute('height',VH);
   const vp=clone.querySelector('#viewport'); if(vp) vp.removeAttribute('transform');
+  const gr=clone.querySelector('#gridrect'); if(gr) gr.remove();
   const s='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(clone);
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'})); a.download='__TITLE___untangled.svg'; a.click();};
 fit();
@@ -655,7 +691,9 @@ def build_html(L, order, tables, fkset, title):
 # ----------------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser(description="Untangle a DBML schema into an interactive ER diagram.")
-    ap.add_argument("dbml", help="input .dbml file")
+    ap.add_argument("dbml", nargs="+",
+                    help="input .dbml file(s); with several files they are merged "
+                         "and a table redefined in a later file wins")
     ap.add_argument("-o", "--out", help="output basename (default: input name)")
     ap.add_argument("--seeds", type=int, default=10, help="layout attempts (more = better, slower)")
     ap.add_argument("--no-svg", action="store_true", help="skip the static .svg output")
@@ -663,8 +701,7 @@ def main():
     ap.add_argument("-q", "--quiet", action="store_true")
     args = ap.parse_args()
 
-    text = read_text(args.dbml)
-    order, tables, refs = parse_dbml(text)
+    order, tables, refs = merge_files(args.dbml, quiet=args.quiet)
     if not args.quiet:
         print(f"parsed {len(tables)} tables, {len(refs)} relationships")
     if not tables:
@@ -674,7 +711,7 @@ def main():
     if not args.quiet:
         print(f"layout: crossings={L['crossings']} length={L['length']:.0f} canvas={L['cw']}x{L['ch']}")
 
-    base = args.out or os.path.splitext(args.dbml)[0]
+    base = args.out or os.path.splitext(args.dbml[0])[0]
     title = os.path.basename(base)
     fkset = fk_columns(refs)
 
