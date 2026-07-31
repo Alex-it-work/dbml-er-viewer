@@ -515,6 +515,8 @@ HTML_TPL = r'''<!DOCTYPE html>
   <label title="Snap tables to a grid while dragging">Snap
     <select id="snap"><option value="0">off</option><option value="10">10</option><option value="20" selected>20</option><option value="26">26</option><option value="50">50</option></select>
   </label>
+  <button id="focusbtn" title="Show the selected table on its own with its direct links (double-click a table)">Focus</button>
+  <button id="backbtn" class="primary" style="display:none" title="Back to the full schema (Esc)">&#9664; Back to schema</button>
   <button id="save">Export SVG</button>
   <span class="sep"></span>
   <span id="hint">wheel: zoom · drag: pan · click a table to highlight</span>
@@ -584,11 +586,57 @@ function hot(nb,pred){
   for(const n in T){const e=T[n].el; if(!e)continue; const keep=nb.has(n); e.classList.toggle('dim',!keep); e.classList.toggle('sel',lock===n);}
 }
 function highlight(name){const nb=new Set([name]); ADJ[name].forEach(k=>nb.add(k)); hot(nb,r=>r.f===name||r.t===name); panel(name);}
+// ---------- focus mode: one table + its direct links, everything else hidden ----------
+let FOCUS=null, SAVED=null;
+const hintEl=document.getElementById('hint'), HINT0=hintEl.textContent; let hintTimer=null;
+function flash(m){ hintEl.textContent=m; hintEl.style.color='#ffd54f';
+  clearTimeout(hintTimer); hintTimer=setTimeout(()=>{hintEl.textContent=HINT0; hintEl.style.color='';},8000); }
+function setFocusUI(on,name){ document.getElementById('focusbtn').style.display=on?'none':'';
+  document.getElementById('backbtn').style.display=on?'':'none';
+  if(on) flash('focused on '+name+' - "Back to schema" or Esc returns'); }
+function snapshotPos(){ const p={}; Object.keys(T).forEach(n=>{p[n]={x:T[n].x,y:T[n].y};}); return p; }
+function visibleBox(){ let a=1/0,b=1/0,c=-1/0,d=-1/0;
+  Object.keys(T).forEach(n=>{const t=T[n]; if(!t.el||t.el.style.display==='none')return;
+    a=Math.min(a,t.x); b=Math.min(b,t.y); c=Math.max(c,t.x+t.w); d=Math.max(d,t.y+t.h);});
+  return isFinite(a)?[a-60,b-60,c+60,d+60]:[0,0,VW,VH]; }
+function moveTable(n,x,y){ const t=T[n]; t.x=x; t.y=y; t.el.setAttribute('transform','translate('+x.toFixed(1)+' '+y.toFixed(1)+')'); }
+function enterFocus(name){
+  if(!T[name]||!T[name].el) return;
+  if(!FOCUS) SAVED={pos:snapshotPos(),k:k,tx:tx,ty:ty,lock:lock};
+  FOCUS=name;
+  const nb=new Set(); (ADJ[name]||new Set()).forEach(n=>nb.add(n));
+  Object.keys(T).forEach(n=>{ if(T[n].el) T[n].el.style.display=(n===name||nb.has(n))?'':'none'; });
+  DATA.rels.forEach(r=>{ r._g.g.style.display=(r.f===name||r.t===name)?'':'none'; });
+  const side={},key={};
+  DATA.rels.forEach(r=>{ if(r.f!==name&&r.t!==name)return; const o=(r.f===name)?r.t:r.f;
+    if(o===name||side[o])return; side[o]=(r.f===name)?'out':'in'; key[o]=(r.f===name)?r.foff:r.toff; });
+  const left=Object.keys(side).filter(n=>side[n]==='in').sort((a,b)=>key[a]-key[b]);
+  const right=Object.keys(side).filter(n=>side[n]==='out').sort((a,b)=>key[a]-key[b]);
+  const GAP=70, COL=320, c=T[name];
+  const colH=arr=>arr.reduce((s,n)=>s+T[n].h,0)+Math.max(arr.length-1,0)*GAP;
+  const H=Math.max(colH(left),colH(right),c.h), top=(c.y+c.h/2)-H/2;
+  const place=(arr,x)=>{ let yy=top+(H-colH(arr))/2; arr.forEach(n=>{ moveTable(n,x,yy); yy+=T[n].h+GAP; }); };
+  place(left, c.x-COL-(left.length?T[left[0]].w:240));
+  place(right, c.x+c.w+COL);
+  DATA.rels.forEach(drawRel);
+  lock=name; highlight(name); setFocusUI(true,name);
+  const b=visibleBox(); fitBox(b[0],b[1],b[2],b[3]);
+}
+function exitFocus(){
+  if(!FOCUS||!SAVED) return;
+  const s=SAVED; FOCUS=null; SAVED=null;
+  Object.keys(T).forEach(n=>{ if(T[n].el) T[n].el.style.display='';
+    if(s.pos[n]) moveTable(n,s.pos[n].x,s.pos[n].y); });
+  DATA.rels.forEach(r=>{ r._g.g.style.display=''; drawRel(r); });
+  k=s.k; tx=s.tx; ty=s.ty; applyView(); setFocusUI(false);
+  if(s.lock){ lock=s.lock; highlight(s.lock); } else { lock=null; clear(); }
+}
 function clear(){DATA.rels.forEach(r=>r._g.g.classList.remove('hot','dim')); for(const n in T){T[n].el&&T[n].el.classList.remove('dim','sel');} if(!lock)resetPanel();}
 document.querySelectorAll('g.table').forEach(e=>{const n=e.getAttribute('data-table');
   e.addEventListener('mouseenter',()=>{if(!lock && !gesture)highlight(n);});
   e.addEventListener('mouseleave',()=>{if(!lock && !gesture)clear();});
-  e.addEventListener('click',ev=>{if(suppressClick)return; ev.stopPropagation(); if(lock===n){lock=null;clear();}else{lock=n;highlight(n);}});});
+  e.addEventListener('click',ev=>{if(suppressClick)return; ev.stopPropagation(); if(lock===n){lock=null;clear();}else{lock=n;highlight(n);}});
+  e.addEventListener('dblclick',ev=>{ev.stopPropagation(); ev.preventDefault(); enterFocus(n);});});
 // (empty-canvas click clears the selection — handled in the pointerup handler below)
 const sTitle=document.getElementById('s-title'),sMeta=document.getElementById('s-meta'),sList=document.getElementById('s-list');
 function resetPanel(){sTitle.textContent='Select a table'; sMeta.textContent='Hover or click a table to see its relationships.'; sList.innerHTML='';}
@@ -603,13 +651,18 @@ function panel(name){
   block('References (N→1)', out, r=>({g:r.t,card:`${r.fc}→${r.tc}`,via:`${r.fcol} → ${r.t}.${r.tcol}`}));
   block('Referenced by (1→N)', inc, r=>({g:r.f,card:`${r.fc}→${r.tc}`,via:`${r.f}.${r.fcol} → ${r.tcol}`}));
   sList.innerHTML=h;
-  sList.querySelectorAll('a[data-go]').forEach(a=>a.addEventListener('click',ev=>{ev.stopPropagation(); const g=a.getAttribute('data-go'); lock=g; highlight(g); focusTable(g);}));
+  sList.querySelectorAll('a[data-go]').forEach(a=>a.addEventListener('click',ev=>{ev.stopPropagation(); const g=a.getAttribute('data-go');
+    if(FOCUS) enterFocus(g); else { lock=g; highlight(g); focusTable(g); }}));
 }
 // view: screen = translate(tx,ty) * scale(k) * content
 let k=1, tx=0, ty=0;
 function applyView(){ viewport.setAttribute('transform','translate('+tx.toFixed(2)+' '+ty.toFixed(2)+') scale('+k+')');
   const z=document.getElementById('zlabel'); if(z) z.textContent=Math.round(k*100)+'%'; }
-function fit(){ const sw=stage.clientWidth||1, sh=stage.clientHeight||1; k=(Math.min(sw/VW,sh/VH)*0.95)||1; tx=(sw-VW*k)/2; ty=(sh-VH*k)/2; applyView(); }
+function fitBox(x0,y0,x1,y1){ const sw=stage.clientWidth||1, sh=stage.clientHeight||1;
+  const w=Math.max(x1-x0,1), h=Math.max(y1-y0,1);
+  k=Math.min(Math.max((Math.min(sw/w,sh/h)*0.95)||1,0.02),8);
+  tx=(sw-w*k)/2-x0*k; ty=(sh-h*k)/2-y0*k; applyView(); }
+function fit(){ fitBox(0,0,VW,VH); }
 function zoomAt(factor,cxClient,cyClient){ const r=stage.getBoundingClientRect(); const mx=cxClient-r.left,my=cyClient-r.top;
   const ux=(mx-tx)/k, uy=(my-ty)/k; k=Math.min(Math.max(k*factor,0.02),8); tx=mx-ux*k; ty=my-uy*k; applyView(); }
 function focusTable(n){ const t=T[n], sw=stage.clientWidth, sh=stage.clientHeight; tx=sw/2-(t.x+t.w/2)*k; ty=sh/2-(t.y+t.h/2)*k; applyView(); }
@@ -658,12 +711,18 @@ stage.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
 function stageCenter(){ const r=stage.getBoundingClientRect(); return [r.left+r.width/2,r.top+r.height/2]; }
 document.getElementById('zin').onclick=()=>{const c=stageCenter(); zoomAt(1.25,c[0],c[1]);};
 document.getElementById('zout').onclick=()=>{const c=stageCenter(); zoomAt(1/1.25,c[0],c[1]);};
-document.getElementById('fit').onclick=fit;
-document.getElementById('reset').onclick=()=>{lock=null;clear();};
+document.getElementById('fit').onclick=()=>{ if(FOCUS){const b=visibleBox(); fitBox(b[0],b[1],b[2],b[3]);} else fit(); };
+document.getElementById('reset').onclick=()=>{ if(FOCUS)exitFocus(); lock=null; clear(); };
+document.getElementById('focusbtn').onclick=()=>{ if(lock)enterFocus(lock); else flash('select a table first (click it), then Focus - or just double-click a table'); };
+document.getElementById('backbtn').onclick=exitFocus;
+window.addEventListener('keydown',e=>{ if(e.key==='Escape'&&FOCUS){e.preventDefault(); exitFocus();} });
 document.getElementById('find').addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase(); if(!q)return;
   const hit=Object.keys(T).find(n=>n.toLowerCase().includes(q)); if(hit){lock=hit;highlight(hit);focusTable(hit);}});
 document.getElementById('save').onclick=()=>{lock=null;clear();
-  const clone=svg.cloneNode(true); clone.setAttribute('viewBox',`0 0 ${VW} ${VH}`); clone.setAttribute('width',VW); clone.setAttribute('height',VH);
+  const clone=svg.cloneNode(true);
+  const bx=FOCUS?visibleBox():[0,0,VW,VH], bw=Math.round(bx[2]-bx[0]), bh=Math.round(bx[3]-bx[1]);
+  clone.setAttribute('viewBox',Math.round(bx[0])+' '+Math.round(bx[1])+' '+bw+' '+bh);
+  clone.setAttribute('width',bw); clone.setAttribute('height',bh);
   const vp=clone.querySelector('#viewport'); if(vp) vp.removeAttribute('transform');
   const gr=clone.querySelector('#gridrect'); if(gr) gr.remove();
   const s='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(clone);

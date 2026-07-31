@@ -14,10 +14,15 @@ This tool re-lays-out the schema from the source and ships a viewer where you ca
 
 ![Highlight a table](docs/highlight.png)
 
+Need a closer look at one table? Double-click it — what points at it on the left, what it points to on the right, everything else out of the way. `Esc` brings the schema back.
+
+![Focus on a table](docs/focus.png)
+
 ## Features
 
 - **Untangled layout** — force-directed placement; multiple random seeds are tried and the one with the fewest line crossings wins. Hub tables drift to the center, satellites cluster around them, isolated tables get their own tidy row.
 - **Click to highlight** — select a table and only its links stay lit; the rest fades. A side panel shows linked tables split into *References (N→1)* and *Referenced by (1→N)*, each with the exact `column → table.column`.
+- **Focus one table** — double-click a table (or select it and hit **Focus**) to see it on its own, laid out for reading: the table in the middle, everything that *points at it* stacked on the left, everything it *points to* on the right, all other tables and lines hidden. Click a neighbour in the side panel to hop to its view; **Back to schema** or **Esc** returns to the full diagram exactly as you left it (including manual placement and the current zoom/pan). Exporting while focused writes just that neighbourhood.
 - **Search** any table by name and jump to it.
 - **Navigation** — zoom with the mouse wheel (centred on the cursor), pan by dragging the canvas (left button on empty space, or middle button anywhere) — the view follows the cursor like a hand tool. No scrollbars; `+` / `−` / `Fit` buttons too.
 - **Merge several .dbml files** — drop more files (or **+ Add .dbml**) to grow the diagram: new tables are drawn in, tables that already exist are *updated, not duplicated*, and duplicate relationships are dropped. **The later file wins**, so re-exporting a changed schema on top of the current one just refreshes it. Existing tables keep their position — only the newcomers get placed, next to whatever they link to.
