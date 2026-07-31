@@ -648,6 +648,8 @@ DATA.rels.forEach(r=>{
   const tb=el('rect',{width:24,height:20,rx:4,fill:'#2a2a2a',stroke:'#64b5f6','stroke-width':1,opacity:.9});
   const tt=el('text',{'text-anchor':'middle',class:'cardinality-label',fill:'#64b5f6'}); tt.textContent=r.tc;
   g.append(vis,hit,fb,ft,tb,tt); relsLayer.append(g); r._g={g,vis,hit,fb,ft,tb,tt};
+  g.addEventListener('click',ev=>{ if(!FOCUS||suppressClick)return; ev.stopPropagation();
+    toggleNeighbour(r.f===FOCUS?r.t:r.f); });
   g.addEventListener('mouseenter',()=>{if(!lock)hot(new Set([r.f,r.t]),x=>x===r);});
   g.addEventListener('mouseleave',()=>{if(!lock)clear();});
 });
@@ -662,13 +664,16 @@ function hot(nb,pred){
 }
 function highlight(name){const nb=new Set([name]); ADJ[name].forEach(k=>nb.add(k)); hot(nb,r=>r.f===name||r.t===name); panel(name);}
 // ---------- focus mode: one table + its direct links, everything else hidden ----------
-let FOCUS=null, SAVED=null;
+let FOCUS=null, SAVED=null, EXPANDED=new Set();
+function toggleNeighbour(n){ if(!FOCUS||n===FOCUS||!T[n])return;
+  if(EXPANDED.has(n))EXPANDED.delete(n); else EXPANDED.add(n);
+  enterFocus(FOCUS,{keepView:true}); }
 const hintEl=document.getElementById('hint'), HINT0=hintEl.textContent; let hintTimer=null;
 function flash(m){ hintEl.textContent=m; hintEl.style.color='#ffd54f';
   clearTimeout(hintTimer); hintTimer=setTimeout(()=>{hintEl.textContent=HINT0; hintEl.style.color='';},8000); }
 function setFocusUI(on,name){ document.getElementById('focusbtn').style.display=on?'none':'';
   document.getElementById('backbtn').style.display=on?'':'none';
-  if(on) flash('focused on '+name+' - "Back to schema" or Esc returns'); }
+  if(on) flash('focused on '+name+' - click a link or a card to open that table in full, double-click to centre on it, Esc returns'); }
 function snapshotPos(){ const p={}; Object.keys(T).forEach(n=>{p[n]={x:T[n].x,y:T[n].y};}); return p; }
 function visibleBox(){ let a=1/0,b=1/0,c=-1/0,d=-1/0;
   Object.keys(T).forEach(n=>{const t=T[n]; if(!t.el||t.el.style.display==='none')return;
@@ -702,8 +707,10 @@ function expandCard(n){
   if(g.dataset.h0){ const h=parseFloat(g.dataset.h0); g.querySelector('rect.table-bg').setAttribute('height',h); T[n].h=h; }
   COLLAPSED.delete(n);
 }
-function enterFocus(name){
+function enterFocus(name,opts){
   if(!T[name]||!T[name].el) return;
+  opts=opts||{};
+  if(FOCUS!==name) EXPANDED=new Set();
   if(!FOCUS) SAVED={pos:snapshotPos(),k:k,tx:tx,ty:ty,lock:lock};
   Array.from(COLLAPSED).forEach(expandCard);
   DATA.rels.forEach(r=>{ if(r._off0){ r.foff=r._off0[0]; r.toff=r._off0[1]; delete r._off0; } });
@@ -720,7 +727,7 @@ function enterFocus(name){
   DATA.rels.forEach(r=>{ if(r.f!==name&&r.t!==name)return;
     if(r.f!==name)(keepCols[r.f]||(keepCols[r.f]=new Set())).add(r.fcol);
     if(r.t!==name)(keepCols[r.t]||(keepCols[r.t]=new Set())).add(r.tcol); });
-  const at={}; Object.keys(keepCols).forEach(n=>{ if(T[n]&&T[n].el) at[n]=collapseCard(n,keepCols[n]); });
+  const at={}; Object.keys(keepCols).forEach(n=>{ if(T[n]&&T[n].el&&!EXPANDED.has(n)) at[n]=collapseCard(n,keepCols[n]); });
   DATA.rels.forEach(r=>{ if(r.f!==name&&r.t!==name)return;
     if(r._off0===undefined) r._off0=[r.foff,r.toff];
     if(r.f!==name&&at[r.f]&&at[r.f][r.fcol]!==undefined) r.foff=at[r.f][r.fcol];
@@ -753,11 +760,11 @@ function enterFocus(name){
   placeCols(best.R, 1,c.x+c.w+CGAP);
   DATA.rels.forEach(drawRel);
   lock=name; highlight(name); setFocusUI(true,name);
-  const b=visibleBox(); fitBox(b[0],b[1],b[2],b[3]);
+  if(!opts.keepView){ const b=visibleBox(); fitBox(b[0],b[1],b[2],b[3]); }
 }
 function exitFocus(){
   if(!FOCUS||!SAVED) return;
-  const s=SAVED; FOCUS=null; SAVED=null;
+  const s=SAVED; FOCUS=null; SAVED=null; EXPANDED=new Set();
   Array.from(COLLAPSED).forEach(expandCard);
   DATA.rels.forEach(r=>{ if(r._off0){ r.foff=r._off0[0]; r.toff=r._off0[1]; delete r._off0; } });
   Object.keys(T).forEach(n=>{ if(T[n].el) T[n].el.style.display='';
@@ -770,7 +777,9 @@ function clear(){DATA.rels.forEach(r=>r._g.g.classList.remove('hot','dim')); for
 document.querySelectorAll('g.table').forEach(e=>{const n=e.getAttribute('data-table');
   e.addEventListener('mouseenter',()=>{if(!lock && !gesture)highlight(n);});
   e.addEventListener('mouseleave',()=>{if(!lock && !gesture)clear();});
-  e.addEventListener('click',ev=>{if(suppressClick)return; ev.stopPropagation(); if(lock===n){lock=null;clear();}else{lock=n;highlight(n);}});
+  e.addEventListener('click',ev=>{if(suppressClick)return; ev.stopPropagation();
+    if(FOCUS){ if(n!==FOCUS) toggleNeighbour(n); return; }
+    if(lock===n){lock=null;clear();}else{lock=n;highlight(n);}});
   e.addEventListener('dblclick',ev=>{ev.stopPropagation(); ev.preventDefault(); enterFocus(n);});});
 // (empty-canvas click clears the selection — handled in the pointerup handler below)
 const sTitle=document.getElementById('s-title'),sMeta=document.getElementById('s-meta'),sList=document.getElementById('s-list');

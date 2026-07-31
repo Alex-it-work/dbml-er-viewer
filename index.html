@@ -413,6 +413,7 @@ function render(model, keepView){
     e.addEventListener('mouseenter',()=>{ if(!lock && !gesture) highlight(n); });
     e.addEventListener('mouseleave',()=>{ if(!lock && !gesture) clear(); });
     e.addEventListener('click',ev=>{ if(suppressClick) return; ev.stopPropagation();
+      if(FOCUS){ if(n!==FOCUS) toggleNeighbour(n); return; }   // focus: click folds/unfolds the card
       if(lock===n){lock=null;clear();} else {lock=n;highlight(n);} });
     e.addEventListener('dblclick',ev=>{ ev.stopPropagation(); ev.preventDefault(); enterFocus(n); });
   });
@@ -428,6 +429,9 @@ function render(model, keepView){
     const r=Object.assign({},e,{_g:{g,vis,hit,fb,ft,tb,tt}}); RELS.push(r);
     g.addEventListener('mouseenter',()=>{ if(!lock && !gesture) hot(new Set([e.f,e.t]),x=>x===r); });
     g.addEventListener('mouseleave',()=>{ if(!lock && !gesture) clear(); });
+    // in focus mode a click on the link opens the table at its far end in full
+    g.addEventListener('click',ev=>{ if(!FOCUS||suppressClick) return; ev.stopPropagation();
+      toggleNeighbour(r.f===FOCUS?r.t:r.f); });
   });
   RELS.forEach(drawRel);
   POS={}; model.order.forEach(n=>{ POS[n]={x:model.x[n],y:model.y[n]}; });
@@ -449,11 +453,17 @@ function clear(){ RELS.forEach(r=>r._g.g.classList.remove('hot','dim')); for(con
 // One table on its own: what points AT it on the left, what it points TO on the
 // right, everything else hidden. The full schema (incl. manual placement and the
 // current view) is restored on exit.
-let FOCUS=null, SAVED=null;
+let FOCUS=null, SAVED=null, EXPANDED=new Set();
+// clicking a link (or a compact card) opens that table in full, and again folds it back
+function toggleNeighbour(n){
+  if(!FOCUS||n===FOCUS||!T[n]) return;
+  if(EXPANDED.has(n)) EXPANDED.delete(n); else EXPANDED.add(n);
+  enterFocus(FOCUS,{keepView:true});
+}
 function setFocusUI(on,name){
   document.getElementById('focusbtn').style.display=on?'none':'';
   document.getElementById('backbtn').style.display=on?'':'none';
-  if(on) flash('focused on '+name+' — “Back to schema” or Esc returns');
+  if(on) flash('focused on '+name+' — click a link or a card to open that table in full · double-click it to centre on it · Esc returns');
 }
 function snapshotPos(){ const p={}; Object.keys(T).forEach(n=>{ p[n]={x:T[n].x,y:T[n].y}; }); return p; }
 function visibleBox(){ let a=1/0,b=1/0,c=-1/0,d=-1/0;
@@ -495,8 +505,10 @@ function expandCard(n){
   COLLAPSED.delete(n);
 }
 
-function enterFocus(name){
+function enterFocus(name,opts){
   if(!T[name]) return;
+  opts=opts||{};
+  if(FOCUS!==name) EXPANDED=new Set();          // a new centre starts folded
   if(!FOCUS) SAVED={pos:snapshotPos(), k:k, tx:tx, ty:ty, lock:lock};
   // start from a clean slate (also when hopping from another focused table)
   Array.from(COLLAPSED).forEach(expandCard);
@@ -522,7 +534,7 @@ function enterFocus(name){
     if(r.f!==name){ (keepCols[r.f]||(keepCols[r.f]=new Set())).add(r.fcol); }
     if(r.t!==name){ (keepCols[r.t]||(keepCols[r.t]=new Set())).add(r.tcol); } });
   const at={};
-  Object.keys(keepCols).forEach(n=>{ if(T[n]) at[n]=collapseCard(n,keepCols[n]); });
+  Object.keys(keepCols).forEach(n=>{ if(T[n]&&!EXPANDED.has(n)) at[n]=collapseCard(n,keepCols[n]); });
   RELS.forEach(r=>{ if(r.f!==name&&r.t!==name) return;
     if(r._off0===undefined) r._off0=[r.foff,r.toff];
     if(r.f!==name && at[r.f] && at[r.f][r.fcol]!==undefined) r.foff=at[r.f][r.fcol];
@@ -561,11 +573,11 @@ function enterFocus(name){
 
   lock=name; highlight(name);
   setFocusUI(true,name);
-  const b=visibleBox(); fitBox(b[0],b[1],b[2],b[3]);
+  if(!opts.keepView){ const b=visibleBox(); fitBox(b[0],b[1],b[2],b[3]); }
 }
 function exitFocus(){
   if(!FOCUS||!SAVED) return;
-  const s=SAVED; FOCUS=null; SAVED=null;
+  const s=SAVED; FOCUS=null; SAVED=null; EXPANDED=new Set();
   Array.from(COLLAPSED).forEach(expandCard);
   RELS.forEach(r=>{ if(r._off0){ r.foff=r._off0[0]; r.toff=r._off0[1]; delete r._off0; } });
   Object.keys(T).forEach(n=>{ T[n].el.style.display='';
