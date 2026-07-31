@@ -453,12 +453,32 @@ function clear(){ RELS.forEach(r=>r._g.g.classList.remove('hot','dim')); for(con
 // One table on its own: what points AT it on the left, what it points TO on the
 // right, everything else hidden. The full schema (incl. manual placement and the
 // current view) is restored on exit.
-let FOCUS=null, SAVED=null, EXPANDED=new Set();
-// clicking a link (or a compact card) opens that table in full, and again folds it back
+let FOCUS=null, SAVED=null, EXPANDED=new Set(), FOCUS_KEEP={};
+function applyAnchors(n,at){
+  RELS.forEach(r=>{ if(r.f!==FOCUS&&r.t!==FOCUS) return;
+    if(r._off0===undefined) r._off0=[r.foff,r.toff];
+    if(r.f===n&&at&&at[r.fcol]!==undefined) r.foff=at[r.fcol];
+    if(r.t===n&&at&&at[r.tcol]!==undefined) r.toff=at[r.tcol]; });
+}
+function resetAnchors(n){
+  RELS.forEach(r=>{ if(r._off0===undefined) return;
+    if(r.f===n) r.foff=r._off0[0];
+    if(r.t===n) r.toff=r._off0[1]; });
+}
+// Clicking a link (or a compact card) opens that table in full and folds it back.
+// The card grows downwards in place: nothing is re-arranged, only the cards
+// below it in the same column slide down to make room.
 function toggleNeighbour(n){
   if(!FOCUS||n===FOCUS||!T[n]) return;
-  if(EXPANDED.has(n)) EXPANDED.delete(n); else EXPANDED.add(n);
-  enterFocus(FOCUS,{keepView:true});
+  const t=T[n], h0=t.h, colX=t.x, y0=t.y;
+  if(EXPANDED.has(n)){ EXPANDED.delete(n); applyAnchors(n, collapseCard(n, FOCUS_KEEP[n]||new Set())); }
+  else { EXPANDED.add(n); expandCard(n); resetAnchors(n); }
+  const delta=T[n].h-h0;
+  if(delta) Object.keys(T).forEach(m=>{
+    if(m===n||T[m].el.style.display==='none') return;
+    if(Math.abs(T[m].x-colX)<1 && T[m].y>y0) moveTable(m,T[m].x,T[m].y+delta);
+  });
+  RELS.forEach(drawRel);
 }
 function setFocusUI(on,name){
   document.getElementById('focusbtn').style.display=on?'none':'';
@@ -533,6 +553,7 @@ function enterFocus(name,opts){
   RELS.forEach(r=>{ if(r.f!==name&&r.t!==name) return;
     if(r.f!==name){ (keepCols[r.f]||(keepCols[r.f]=new Set())).add(r.fcol); }
     if(r.t!==name){ (keepCols[r.t]||(keepCols[r.t]=new Set())).add(r.tcol); } });
+  FOCUS_KEEP=keepCols;
   const at={};
   Object.keys(keepCols).forEach(n=>{ if(T[n]&&!EXPANDED.has(n)) at[n]=collapseCard(n,keepCols[n]); });
   RELS.forEach(r=>{ if(r.f!==name&&r.t!==name) return;

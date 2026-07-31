@@ -589,10 +589,26 @@ function hot(nb,pred){
 }
 function highlight(name){const nb=new Set([name]); ADJ[name].forEach(k=>nb.add(k)); hot(nb,r=>r.f===name||r.t===name); panel(name);}
 // ---------- focus mode: one table + its direct links, everything else hidden ----------
-let FOCUS=null, SAVED=null, EXPANDED=new Set();
-function toggleNeighbour(n){ if(!FOCUS||n===FOCUS||!T[n])return;
-  if(EXPANDED.has(n))EXPANDED.delete(n); else EXPANDED.add(n);
-  enterFocus(FOCUS,{keepView:true}); }
+let FOCUS=null, SAVED=null, EXPANDED=new Set(), FOCUS_KEEP={};
+function applyAnchors(n,at){ DATA.rels.forEach(r=>{ if(r.f!==FOCUS&&r.t!==FOCUS)return;
+  if(r._off0===undefined) r._off0=[r.foff,r.toff];
+  if(r.f===n&&at&&at[r.fcol]!==undefined) r.foff=at[r.fcol];
+  if(r.t===n&&at&&at[r.tcol]!==undefined) r.toff=at[r.tcol]; }); }
+function resetAnchors(n){ DATA.rels.forEach(r=>{ if(r._off0===undefined)return;
+  if(r.f===n) r.foff=r._off0[0]; if(r.t===n) r.toff=r._off0[1]; }); }
+// the card grows downwards in place; only the cards below it in the same
+// column slide down, the rest of the focus view stays exactly where it is
+function toggleNeighbour(n){
+  if(!FOCUS||n===FOCUS||!T[n])return;
+  const t=T[n], h0=t.h, colX=t.x, y0=t.y;
+  if(EXPANDED.has(n)){ EXPANDED.delete(n); applyAnchors(n, collapseCard(n, FOCUS_KEEP[n]||new Set())); }
+  else { EXPANDED.add(n); expandCard(n); resetAnchors(n); }
+  const delta=T[n].h-h0;
+  if(delta) Object.keys(T).forEach(m=>{
+    if(m===n||!T[m].el||T[m].el.style.display==='none')return;
+    if(Math.abs(T[m].x-colX)<1 && T[m].y>y0) moveTable(m,T[m].x,T[m].y+delta); });
+  DATA.rels.forEach(drawRel);
+}
 const hintEl=document.getElementById('hint'), HINT0=hintEl.textContent; let hintTimer=null;
 function flash(m){ hintEl.textContent=m; hintEl.style.color='#ffd54f';
   clearTimeout(hintTimer); hintTimer=setTimeout(()=>{hintEl.textContent=HINT0; hintEl.style.color='';},8000); }
@@ -652,6 +668,7 @@ function enterFocus(name,opts){
   DATA.rels.forEach(r=>{ if(r.f!==name&&r.t!==name)return;
     if(r.f!==name)(keepCols[r.f]||(keepCols[r.f]=new Set())).add(r.fcol);
     if(r.t!==name)(keepCols[r.t]||(keepCols[r.t]=new Set())).add(r.tcol); });
+  FOCUS_KEEP=keepCols;
   const at={}; Object.keys(keepCols).forEach(n=>{ if(T[n]&&T[n].el&&!EXPANDED.has(n)) at[n]=collapseCard(n,keepCols[n]); });
   DATA.rels.forEach(r=>{ if(r.f!==name&&r.t!==name)return;
     if(r._off0===undefined) r._off0=[r.foff,r.toff];
