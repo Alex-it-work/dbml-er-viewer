@@ -463,9 +463,44 @@ function visibleBox(){ let a=1/0,b=1/0,c=-1/0,d=-1/0;
 function moveTable(n,x,y){ const t=T[n]; t.x=x; t.y=y;
   t.el.setAttribute('transform','translate('+x.toFixed(1)+' '+y.toFixed(1)+')'); }
 
+// In focus mode a neighbour is shown as a compact card: header + only the
+// column(s) the relationship actually uses. Returns {column: new baseline y}.
+const COLLAPSED=new Set();
+function collapseCard(n, keep){
+  const g=T[n].el, at={};
+  if(!g.dataset.h0) g.dataset.h0=String(T[n].h);
+  let y=COL0_Y, kept=0;
+  g.querySelectorAll('g.column').forEach(row=>{
+    const col=row.getAttribute('data-column'), t0=row.querySelector('text');
+    if(keep.has(col)&&t0){
+      const oy=parseFloat(t0.getAttribute('y'));
+      row.style.display=''; row.setAttribute('transform','translate(0 '+(y-oy).toFixed(1)+')');
+      at[col]=y; y+=ROW_H; kept++;
+    } else row.style.display='none';
+  });
+  g.querySelectorAll('line').forEach(l=>l.style.display='none');
+  g.querySelectorAll('rect').forEach(r=>{ if(r.getAttribute('height')==='26') r.style.display='none'; });
+  const h=tableHeight(Math.max(kept,1));
+  g.querySelector('rect.table-bg').setAttribute('height',h);
+  T[n].h=h; COLLAPSED.add(n);
+  return at;
+}
+function expandCard(n){
+  const g=T[n].el; if(!g) return;
+  g.querySelectorAll('g.column').forEach(row=>{ row.style.display=''; row.removeAttribute('transform'); });
+  g.querySelectorAll('line').forEach(l=>l.style.display='');
+  g.querySelectorAll('rect').forEach(r=>{ if(r.getAttribute('height')==='26') r.style.display=''; });
+  if(g.dataset.h0){ const h=parseFloat(g.dataset.h0);
+    g.querySelector('rect.table-bg').setAttribute('height',h); T[n].h=h; }
+  COLLAPSED.delete(n);
+}
+
 function enterFocus(name){
   if(!T[name]) return;
   if(!FOCUS) SAVED={pos:snapshotPos(), k:k, tx:tx, ty:ty, lock:lock};
+  // start from a clean slate (also when hopping from another focused table)
+  Array.from(COLLAPSED).forEach(expandCard);
+  RELS.forEach(r=>{ if(r._off0){ r.foff=r._off0[0]; r.toff=r._off0[1]; delete r._off0; } });
   FOCUS=name;
   const nb=new Set(); (ADJ[name]||new Set()).forEach(n=>nb.add(n));
   Object.keys(T).forEach(n=>{ T[n].el.style.display=(n===name||nb.has(n))?'':'none'; });
@@ -481,13 +516,47 @@ function enterFocus(name){
   const left=Object.keys(side).filter(n=>side[n]==='in').sort((a,b)=>key[a]-key[b]);
   const right=Object.keys(side).filter(n=>side[n]==='out').sort((a,b)=>key[a]-key[b]);
 
-  const GAP=70, COL=320, c=T[name];
-  const colH=arr=>arr.reduce((s,n)=>s+T[n].h,0)+Math.max(arr.length-1,0)*GAP;
-  const H=Math.max(colH(left),colH(right),c.h), top=(c.y+c.h/2)-H/2;
-  const place=(arr,x)=>{ let yy=top+(H-colH(arr))/2;
-    arr.forEach(n=>{ moveTable(n,x,yy); yy+=T[n].h+GAP; }); };
-  place(left, c.x-COL-W_TABLE);
-  place(right, c.x+c.w+COL);
+  // compact neighbours: keep only the columns that take part in a link here
+  const keepCols={};
+  RELS.forEach(r=>{ if(r.f!==name&&r.t!==name) return;
+    if(r.f!==name){ (keepCols[r.f]||(keepCols[r.f]=new Set())).add(r.fcol); }
+    if(r.t!==name){ (keepCols[r.t]||(keepCols[r.t]=new Set())).add(r.tcol); } });
+  const at={};
+  Object.keys(keepCols).forEach(n=>{ if(T[n]) at[n]=collapseCard(n,keepCols[n]); });
+  RELS.forEach(r=>{ if(r.f!==name&&r.t!==name) return;
+    if(r._off0===undefined) r._off0=[r.foff,r.toff];
+    if(r.f!==name && at[r.f] && at[r.f][r.fcol]!==undefined) r.foff=at[r.f][r.fcol];
+    if(r.t!==name && at[r.t] && at[r.t][r.tcol]!==undefined) r.toff=at[r.t][r.tcol]; });
+
+  // Neighbours go into as many columns as it takes to keep the view roughly
+  // screen-shaped - a hub with 20 links must not become one endless strip.
+  const GAP=70, CGAP=300, XGAP=120, c=T[name];
+  const sumH=arr=>arr.reduce((s,n)=>s+T[n].h,0)+Math.max(arr.length-1,0)*GAP;
+  const packCols=(list,maxH)=>{ const cols=[]; let cur=[],h=0;
+    list.forEach(n=>{ const th=T[n].h;
+      if(cur.length && h+GAP+th>maxH){ cols.push(cur); cur=[]; h=0; }
+      h+=(cur.length?GAP:0)+th; cur.push(n); });
+    if(cur.length) cols.push(cur); return cols; };
+  const colsH=cols=>cols.reduce((m,col)=>Math.max(m,sumH(col)),0);
+  const aspect=(stage.clientWidth||1600)/(stage.clientHeight||900);
+  const tallest=Math.max(sumH(left),sumH(right),1);
+  let best=null;
+  for(let kk=1;kk<=10;kk++){
+    const L=packCols(left,Math.max(c.h,tallest/kk)), R=packCols(right,Math.max(c.h,tallest/kk));
+    const w=(L.length+R.length)*(W_TABLE+XGAP)+c.w+2*CGAP;
+    const h=Math.max(c.h,colsH(L),colsH(R));
+    const s=Math.abs(Math.log((w/h)/aspect));       // closest to the screen shape wins
+    if(!best||s<best.s) best={s,L,R};
+  }
+  const L=best.L, R=best.R;
+  const H=Math.max(c.h,colsH(L),colsH(R)), top=(c.y+c.h/2)-H/2;
+  const placeCols=(cols,dir,edgeX)=>cols.forEach((col,i)=>{
+    const x = dir<0 ? edgeX-(i+1)*W_TABLE-i*XGAP : edgeX+i*(W_TABLE+XGAP);
+    let yy=top+(H-sumH(col))/2;
+    col.forEach(n=>{ moveTable(n,x,yy); yy+=T[n].h+GAP; });
+  });
+  placeCols(L,-1,c.x-CGAP);
+  placeCols(R, 1,c.x+c.w+CGAP);
   RELS.forEach(drawRel);
 
   lock=name; highlight(name);
@@ -497,6 +566,8 @@ function enterFocus(name){
 function exitFocus(){
   if(!FOCUS||!SAVED) return;
   const s=SAVED; FOCUS=null; SAVED=null;
+  Array.from(COLLAPSED).forEach(expandCard);
+  RELS.forEach(r=>{ if(r._off0){ r.foff=r._off0[0]; r.toff=r._off0[1]; delete r._off0; } });
   Object.keys(T).forEach(n=>{ T[n].el.style.display='';
     if(s.pos[n]){ moveTable(n,s.pos[n].x,s.pos[n].y); POS[n]={x:s.pos[n].x,y:s.pos[n].y}; } });
   RELS.forEach(r=>{ r._g.g.style.display=''; drawRel(r); });

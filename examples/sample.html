@@ -675,9 +675,38 @@ function visibleBox(){ let a=1/0,b=1/0,c=-1/0,d=-1/0;
     a=Math.min(a,t.x); b=Math.min(b,t.y); c=Math.max(c,t.x+t.w); d=Math.max(d,t.y+t.h);});
   return isFinite(a)?[a-60,b-60,c+60,d+60]:[0,0,VW,VH]; }
 function moveTable(n,x,y){ const t=T[n]; t.x=x; t.y=y; t.el.setAttribute('transform','translate('+x.toFixed(1)+' '+y.toFixed(1)+')'); }
+// compact neighbour cards: header + only the column(s) the link uses
+const ROW_H=26, COL0_Y=61, COLLAPSED=new Set();
+const cardHeight=n=>58+ROW_H*Math.max(n,1);
+function collapseCard(n,keep){
+  const g=T[n].el, at={};
+  if(!g.dataset.h0) g.dataset.h0=String(T[n].h);
+  let y=COL0_Y, kept=0;
+  g.querySelectorAll('g.column').forEach(row=>{
+    const col=row.getAttribute('data-column'), t0=row.querySelector('text');
+    if(keep.has(col)&&t0){ const oy=parseFloat(t0.getAttribute('y'));
+      row.style.display=''; row.setAttribute('transform','translate(0 '+(y-oy).toFixed(1)+')');
+      at[col]=y; y+=ROW_H; kept++;
+    } else row.style.display='none'; });
+  g.querySelectorAll('line').forEach(l=>l.style.display='none');
+  g.querySelectorAll('rect').forEach(r=>{ if(r.getAttribute('height')==='26') r.style.display='none'; });
+  const h=cardHeight(Math.max(kept,1));
+  g.querySelector('rect.table-bg').setAttribute('height',h);
+  T[n].h=h; COLLAPSED.add(n); return at;
+}
+function expandCard(n){
+  const g=T[n].el; if(!g) return;
+  g.querySelectorAll('g.column').forEach(row=>{row.style.display=''; row.removeAttribute('transform');});
+  g.querySelectorAll('line').forEach(l=>l.style.display='');
+  g.querySelectorAll('rect').forEach(r=>{ if(r.getAttribute('height')==='26') r.style.display=''; });
+  if(g.dataset.h0){ const h=parseFloat(g.dataset.h0); g.querySelector('rect.table-bg').setAttribute('height',h); T[n].h=h; }
+  COLLAPSED.delete(n);
+}
 function enterFocus(name){
   if(!T[name]||!T[name].el) return;
   if(!FOCUS) SAVED={pos:snapshotPos(),k:k,tx:tx,ty:ty,lock:lock};
+  Array.from(COLLAPSED).forEach(expandCard);
+  DATA.rels.forEach(r=>{ if(r._off0){ r.foff=r._off0[0]; r.toff=r._off0[1]; delete r._off0; } });
   FOCUS=name;
   const nb=new Set(); (ADJ[name]||new Set()).forEach(n=>nb.add(n));
   Object.keys(T).forEach(n=>{ if(T[n].el) T[n].el.style.display=(n===name||nb.has(n))?'':'none'; });
@@ -687,12 +716,41 @@ function enterFocus(name){
     if(o===name||side[o])return; side[o]=(r.f===name)?'out':'in'; key[o]=(r.f===name)?r.foff:r.toff; });
   const left=Object.keys(side).filter(n=>side[n]==='in').sort((a,b)=>key[a]-key[b]);
   const right=Object.keys(side).filter(n=>side[n]==='out').sort((a,b)=>key[a]-key[b]);
-  const GAP=70, COL=320, c=T[name];
-  const colH=arr=>arr.reduce((s,n)=>s+T[n].h,0)+Math.max(arr.length-1,0)*GAP;
-  const H=Math.max(colH(left),colH(right),c.h), top=(c.y+c.h/2)-H/2;
-  const place=(arr,x)=>{ let yy=top+(H-colH(arr))/2; arr.forEach(n=>{ moveTable(n,x,yy); yy+=T[n].h+GAP; }); };
-  place(left, c.x-COL-(left.length?T[left[0]].w:240));
-  place(right, c.x+c.w+COL);
+  const keepCols={};
+  DATA.rels.forEach(r=>{ if(r.f!==name&&r.t!==name)return;
+    if(r.f!==name)(keepCols[r.f]||(keepCols[r.f]=new Set())).add(r.fcol);
+    if(r.t!==name)(keepCols[r.t]||(keepCols[r.t]=new Set())).add(r.tcol); });
+  const at={}; Object.keys(keepCols).forEach(n=>{ if(T[n]&&T[n].el) at[n]=collapseCard(n,keepCols[n]); });
+  DATA.rels.forEach(r=>{ if(r.f!==name&&r.t!==name)return;
+    if(r._off0===undefined) r._off0=[r.foff,r.toff];
+    if(r.f!==name&&at[r.f]&&at[r.f][r.fcol]!==undefined) r.foff=at[r.f][r.fcol];
+    if(r.t!==name&&at[r.t]&&at[r.t][r.tcol]!==undefined) r.toff=at[r.t][r.tcol]; });
+  // neighbours are packed into several columns so a hub table does not turn
+  // the focus view into one endless vertical strip
+  const GAP=70, CGAP=300, XGAP=120, CW0=240, c=T[name];
+  const sumH=arr=>arr.reduce((s,n)=>s+T[n].h,0)+Math.max(arr.length-1,0)*GAP;
+  const packCols=(list,maxH)=>{ const cols=[]; let cur=[],h=0;
+    list.forEach(n=>{ const th=T[n].h;
+      if(cur.length&&h+GAP+th>maxH){cols.push(cur);cur=[];h=0;}
+      h+=(cur.length?GAP:0)+th; cur.push(n); });
+    if(cur.length)cols.push(cur); return cols; };
+  const colsH=cols=>cols.reduce((m,col)=>Math.max(m,sumH(col)),0);
+  const aspect=(stage.clientWidth||1600)/(stage.clientHeight||900);
+  const tallest=Math.max(sumH(left),sumH(right),1);
+  let best=null;
+  for(let kk=1;kk<=10;kk++){
+    const L2=packCols(left,Math.max(c.h,tallest/kk)), R2=packCols(right,Math.max(c.h,tallest/kk));
+    const w=(L2.length+R2.length)*(CW0+XGAP)+c.w+2*CGAP, h=Math.max(c.h,colsH(L2),colsH(R2));
+    const s=Math.abs(Math.log((w/h)/aspect));
+    if(!best||s<best.s) best={s,L:L2,R:R2};
+  }
+  const H=Math.max(c.h,colsH(best.L),colsH(best.R)), top=(c.y+c.h/2)-H/2;
+  const placeCols=(cols,dir,edgeX)=>cols.forEach((col,i)=>{
+    const x = dir<0 ? edgeX-(i+1)*CW0-i*XGAP : edgeX+i*(CW0+XGAP);
+    let yy=top+(H-sumH(col))/2;
+    col.forEach(n=>{ moveTable(n,x,yy); yy+=T[n].h+GAP; }); });
+  placeCols(best.L,-1,c.x-CGAP);
+  placeCols(best.R, 1,c.x+c.w+CGAP);
   DATA.rels.forEach(drawRel);
   lock=name; highlight(name); setFocusUI(true,name);
   const b=visibleBox(); fitBox(b[0],b[1],b[2],b[3]);
@@ -700,6 +758,8 @@ function enterFocus(name){
 function exitFocus(){
   if(!FOCUS||!SAVED) return;
   const s=SAVED; FOCUS=null; SAVED=null;
+  Array.from(COLLAPSED).forEach(expandCard);
+  DATA.rels.forEach(r=>{ if(r._off0){ r.foff=r._off0[0]; r.toff=r._off0[1]; delete r._off0; } });
   Object.keys(T).forEach(n=>{ if(T[n].el) T[n].el.style.display='';
     if(s.pos[n]) moveTable(n,s.pos[n].x,s.pos[n].y); });
   DATA.rels.forEach(r=>{ r._g.g.style.display=''; drawRel(r); });
