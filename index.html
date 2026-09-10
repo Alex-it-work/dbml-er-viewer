@@ -133,7 +133,9 @@ function parseDBML(text){
   const lines=text.split(/\r?\n/).map(l=>{ const i=l.indexOf('//'); return i>=0?l.slice(0,i):l; });
   const tables={}, order=[], refs=[];
   const SKIP=['project','enum','tablegroup','note','indexes'];
-  const addRef=(a,ac,b,bc,op)=>{ const c=CARD[op]||['N','1']; if(a&&b&&ac&&bc) refs.push([a,ac,b,bc,c[0],c[1]]); };
+  // '<?' / '?<?' (sql2dbml) mark nullability, not cardinality - strip the '?'
+  const addRef=(a,ac,b,bc,op)=>{ op=String(op).replace(/[?]/g,'');
+    const c=CARD[op]||['N','1']; if(a&&b&&ac&&bc) refs.push([a,ac,b,bc,c[0],c[1]]); };
   let i=0; const n=lines.length;
   while(i<n){
     let line=lines[i].trim(); i++;
@@ -148,12 +150,12 @@ function parseDBML(text){
         while(!block.includes('}') && i<n){ block+=' '+lines[i]; i++; }
         block=block.split('}')[0];
         block.split(/[\n,]/).forEach(part=>{
-          const mm=part.match(/\s*(.+?)\s*([<>-]{1,2})\s*(.+?)\s*$/);
+          const mm=part.match(/\s*(.+?)\s*(\??[<>-]{1,2}\??)\s*(.+?)\s*$/);
           if(mm){ const [a,ac]=refEndpoint(mm[1]); const [b,bc]=refEndpoint(mm[3]); addRef(a,ac,b,bc,mm[2]); }
         });
         continue;
       }
-      const mm=body.match(/(.+?)\s*([<>-]{1,2})\s*(.+?)\s*$/);
+      const mm=body.match(/(.+?)\s*(\??[<>-]{1,2}\??)\s*(.+?)\s*$/);
       if(mm){ const [a,ac]=refEndpoint(mm[1]); const [b,bc]=refEndpoint(mm[3]); addRef(a,ac,b,bc,mm[2]); }
       continue;
     }
@@ -171,22 +173,27 @@ function parseDBML(text){
       let decl=mt[1].replace(/\s+as\s+\w+\s*$/i,'');
       const tname=shortName(decl);
       if(!line.includes('{')){ while(i<n && !lines[i].includes('{')) i++; if(i<n) i++; }
-      const cols=[];
-      while(i<n && !lines[i].includes('}')){
-        const cl=lines[i].trim(); i++;
-        if(!cl) continue;
+      const cols=[]; let depth=1;
+      while(i<n && depth>0){
+        const raw=lines[i]; i++;
+        // braces inside `...` / '...' (regex quantifiers, defaults) don't nest
+        const bare=raw.replace(/`[^`]*`|'[^']*'/g,'');
+        const inner=depth>1;                       // inside Indexes{} / Note{}
+        depth+=(bare.split('{').length-1)-(bare.split('}').length-1);
+        if(depth<=0) break;                        // table closed
+        const cl=raw.trim();
+        if(inner||!cl||cl.startsWith('(')) continue;
         const cll=cl.toLowerCase();
-        if(cll.startsWith('indexes')||cll.startsWith('note')||cl.startsWith('(')) continue;
+        if(cll.startsWith('indexes')||cll.startsWith('note')) continue;
         let cm=cl.match(/^("[^"]+"|`[^`]+`|[^\s\[]+)\s+([^\[\s]+(?:\([^)]*\))?)\s*(\[.*\])?/);
         let cname,ctype,settings;
         if(cm){ cname=unquote(cm[1]); ctype=cm[2]; settings=cm[3]||''; }
         else{ cm=cl.match(/^("[^"]+"|`[^`]+`|\S+)\s*(\[.*\])?/); if(!cm) continue; cname=unquote(cm[1]); ctype=''; settings=cm[2]||''; }
         const pk=/\b(pk|primary key)\b/i.test(settings);
-        const im=settings.match(/ref:\s*([<>-]{1,2})\s*([^\],]+)/i);
+        const im=settings.match(/ref:\s*(\??[<>-]{1,2}\??)\s*([^\],]+)/i);
         if(im){ const [b,bc]=refEndpoint(im[2]); addRef(tname,cname,b,bc,im[1]); }
         cols.push({col:cname,type:ctype,pk});
       }
-      if(i<n) i++;                                       // consume }
       if(!(tname in tables)) order.push(tname);
       tables[tname]=cols;
       continue;

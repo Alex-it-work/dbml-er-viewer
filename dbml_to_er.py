@@ -78,7 +78,10 @@ def parse_ref_endpoint(tok):
         return None, None
     return short_name(m.group(1)), unquote(m.group(2))
 
+OP_RE = r'\??[<>-]{1,2}\??'          # >, <, -, <> and the nullable forms <?, ?<?
+
 def add_ref(refs, a, ac, b, bc, op):
+    op = op.replace("?", "")            # "<?" / "?<?" carry nullability, not cardinality
     fc, tc = CARD.get(op, ("N", "1"))
     if a and b and ac and bc:
         refs.append((a, ac, b, bc, fc, tc))
@@ -111,13 +114,13 @@ def parse_dbml(text):
                     block += " " + lines[i]; i += 1
                 block = block.split("}")[0]
                 for part in re.split(r'[\n,]', block):
-                    mm = re.match(r'\s*(.+?)\s*([<>-]{1,2})\s*(.+?)\s*$', part)
+                    mm = re.match(r'\s*(.+?)\s*(' + OP_RE + r')\s*(.+?)\s*$', part)
                     if mm:
                         a, ac = parse_ref_endpoint(mm.group(1))
                         b, bc = parse_ref_endpoint(mm.group(3))
                         add_ref(refs, a, ac, b, bc, mm.group(2))
                 continue
-            mm = re.match(r'(.+?)\s*([<>-]{1,2})\s*(.+?)\s*$', body)
+            mm = re.match(r'(.+?)\s*(' + OP_RE + r')\s*(.+?)\s*$', body)
             if mm:
                 a, ac = parse_ref_endpoint(mm.group(1))
                 b, bc = parse_ref_endpoint(mm.group(3))
@@ -144,11 +147,19 @@ def parse_dbml(text):
                 if i < n:
                     i += 1
             cols = []
-            while i < n and "}" not in lines[i]:
-                cl = lines[i].strip(); i += 1
-                if not cl or cl.lower().startswith("indexes") or cl.startswith("("):
+            depth = 1
+            while i < n and depth > 0:
+                raw = lines[i]; i += 1
+                # braces inside `...` / '...' (regex quantifiers, defaults) don't nest
+                bare = re.sub(r"`[^`]*`|'[^']*'", "", raw)
+                inner = depth > 1                       # inside Indexes{} / Note{}
+                depth += bare.count("{") - bare.count("}")
+                if depth <= 0:
+                    break                               # table closed
+                cl = raw.strip()
+                if inner or not cl or cl.startswith("("):
                     continue
-                if cl.lower().startswith("note"):
+                if cl.lower().startswith("indexes") or cl.lower().startswith("note"):
                     continue
                 # column:  name  type  [settings]
                 cm = re.match(r'("[^"]+"|`[^`]+`|[^\s\[]+)\s+([^\[\s]+(?:\([^)]*\))?)\s*(\[.*\])?', cl)
@@ -160,13 +171,11 @@ def parse_dbml(text):
                 else:
                     cname = unquote(cm.group(1)); ctype = cm.group(2); settings = cm.group(3) or ""
                 pk = bool(re.search(r'\b(pk|primary key)\b', settings, re.I))
-                im = re.search(r'ref:\s*([<>-]{1,2})\s*([^\],]+)', settings, re.I)
+                im = re.search(r'ref:\s*(' + OP_RE + r')\s*([^\],]+)', settings, re.I)
                 if im:
                     b, bc = parse_ref_endpoint(im.group(2))
                     add_ref(refs, tname, cname, b, bc, im.group(1))
                 cols.append((cname, ctype, pk))
-            if i < n:
-                i += 1                                # consume closing }
             if tname not in tables:
                 order.append(tname)
             tables[tname] = cols
