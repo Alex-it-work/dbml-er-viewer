@@ -373,20 +373,31 @@ function fkMap(refs){ const m={}; const add=(t,c)=>{ (m[t]||(m[t]=new Set())).ad
   refs.forEach(([f,fc,t,tc])=>{ add(f,fc); add(t,tc); }); return m; }
 const isFK=(fks,name,col)=> !!(fks[name] && fks[name].has(col));
 
+// Presentation attributes, not just CSS classes: an exported .svg must stay
+// readable in viewers that ignore <style> (Word, PowerPoint, Confluence...).
+const FONT="'Segoe UI',Arial,sans-serif";
+const S_HDR={class:'table-header',fill:'#ffffff','font-size':'13','font-weight':'600','font-family':FONT};
+const S_COL={class:'column-name',fill:'#e0e0e0','font-size':'11','font-family':FONT};
+const S_TYP={class:'column-type',fill:'#8a8a8a','font-size':'10','font-family':FONT};
+const S_PK ={class:'pk-icon',fill:'#ffd700','font-size':'9','font-weight':'bold','font-family':FONT};
+const S_FK ={class:'fk-icon',fill:'#64b5f6','font-size':'9','font-weight':'bold','font-family':FONT};
+const S_CARD={class:'cardinality-label',fill:'#64b5f6','font-size':'14','font-weight':'bold','font-family':FONT};
+const sty=(base,extra)=>Object.assign({},extra,base);
+
 function buildTable(name, cols, x, y, fks){
   const h=tableHeight(cols.length);
   const g=el('g',{class:'table draggable','data-table':name,transform:`translate(${Math.round(x)},${Math.round(y)})`},tablesLayer);
   el('rect',{class:'table-bg',x:0,y:0,width:W_TABLE,height:h,fill:'#2a2a2a',stroke:'#3498db','stroke-width':2,rx:8,ry:8,filter:'url(#shadow)'},g);
   el('rect',{class:'table-header-bg',x:0,y:0,width:W_TABLE,height:HEADER_H,fill:'#3498db',rx:8,ry:8},g);
   el('rect',{x:0,y:HEADER_H-8,width:W_TABLE,height:8,fill:'#3498db'},g);
-  txt(g,name,{x:W_TABLE/2,y:24,'text-anchor':'middle',class:'table-header'});
+  txt(g,name,sty(S_HDR,{x:W_TABLE/2,y:24,'text-anchor':'middle'}));
   cols.forEach((c,i)=>{ const by=colOffset(i);
     if(i%2===1) el('rect',{x:2,y:by-15,width:W_TABLE-4,height:ROW_H,fill:'rgba(255,255,255,0.02)',rx:2},g);
     const cg=el('g',{class:'column','data-table':name,'data-column':c.col},g);
-    if(c.pk){ txt(cg,'PK',{x:10,y:by,class:'pk-icon'}); txt(cg,c.col,{x:30,y:by,class:'column-name'}); }
-    else if(isFK(fks,name,c.col)){ txt(cg,'🔗',{x:10,y:by,class:'fk-icon'}); txt(cg,c.col,{x:28,y:by,class:'column-name'}); }
-    else txt(cg,c.col,{x:14,y:by,class:'column-name'});
-    if(c.type) txt(cg,c.type,{x:W_TABLE-10,y:by,'text-anchor':'end',class:'column-type'});
+    if(c.pk){ txt(cg,'PK',sty(S_PK,{x:10,y:by})); txt(cg,c.col,sty(S_COL,{x:30,y:by})); }
+    else if(isFK(fks,name,c.col)){ txt(cg,'🔗',sty(S_FK,{x:10,y:by})); txt(cg,c.col,sty(S_COL,{x:28,y:by})); }
+    else txt(cg,c.col,sty(S_COL,{x:14,y:by}));
+    if(c.type) txt(cg,c.type,sty(S_TYP,{x:W_TABLE-10,y:by,'text-anchor':'end'}));
     if(i<cols.length-1) el('line',{x1:8,y1:by+12,x2:W_TABLE-8,y2:by+12,stroke:'rgba(255,255,255,0.05)','stroke-width':1},g);
   });
   return g;
@@ -430,9 +441,9 @@ function render(model, keepView){
     const vis=el('path',{class:'relation-line',stroke:'#64b5f6','stroke-opacity':'0.6','stroke-width':'2',fill:'none','marker-start':mk(e.fc),'marker-end':mk(e.tc)},g);
     const hit=el('path',{stroke:'transparent','stroke-width':'18',fill:'none'},g);
     const fb=el('rect',{width:24,height:20,rx:4,fill:'#2a2a2a',stroke:'#64b5f6','stroke-width':1,opacity:.9},g);
-    const ft=txt(g,e.fc,{'text-anchor':'middle',class:'cardinality-label',fill:'#64b5f6'});
+    const ft=txt(g,e.fc,sty(S_CARD,{'text-anchor':'middle'}));
     const tb=el('rect',{width:24,height:20,rx:4,fill:'#2a2a2a',stroke:'#64b5f6','stroke-width':1,opacity:.9},g);
-    const tt=txt(g,e.tc,{'text-anchor':'middle',class:'cardinality-label',fill:'#64b5f6'});
+    const tt=txt(g,e.tc,sty(S_CARD,{'text-anchor':'middle'}));
     const r=Object.assign({},e,{_g:{g,vis,hit,fb,ft,tb,tt}}); RELS.push(r);
     g.addEventListener('mouseenter',()=>{ if(!lock && !gesture) hot(new Set([e.f,e.t]),x=>x===r); });
     g.addEventListener('mouseleave',()=>{ if(!lock && !gesture) clear(); });

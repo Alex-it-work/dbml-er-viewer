@@ -389,22 +389,22 @@ def table_markup(name, cols, x, y, fkset, pad="    "):
     p.append(f'{pad}  <rect class="table-bg" x="0" y="0" width="{W_TABLE}" height="{h}" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>')
     p.append(f'{pad}  <rect class="table-header-bg" x="0" y="0" width="{W_TABLE}" height="{HEADER_H}" fill="#3498db" rx="8" ry="8"/>')
     p.append(f'{pad}  <rect x="0" y="{HEADER_H-8}" width="{W_TABLE}" height="8" fill="#3498db"/>')
-    p.append(f'{pad}  <text x="{W_TABLE//2}" y="24" text-anchor="middle" class="table-header">{esc(name)}</text>')
+    p.append(f'{pad}  <text x="{W_TABLE//2}" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">{esc(name)}</text>')
     for i, (cname, ctype, pk) in enumerate(cols):
         by = col_offset(i)
         if i % 2 == 1:
             p.append(f'{pad}  <rect x="2" y="{by-15}" width="{W_TABLE-4}" height="{ROW_H}" fill="rgba(255,255,255,0.02)" rx="2"/>')
         p.append(f'{pad}  <g class="column" data-table="{esc(name)}" data-column="{esc(cname)}">')
         if pk:
-            p.append(f'{pad}    <text x="10" y="{by}" class="pk-icon">PK</text>')
-            p.append(f'{pad}    <text x="30" y="{by}" class="column-name">{esc(cname)}</text>')
+            p.append(f'{pad}    <text x="10" y="{by}" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>')
+            p.append(f'{pad}    <text x="30" y="{by}" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">{esc(cname)}</text>')
         elif (name, cname) in fkset:
-            p.append(f'{pad}    <text x="10" y="{by}" class="fk-icon">&#128279;</text>')
-            p.append(f'{pad}    <text x="28" y="{by}" class="column-name">{esc(cname)}</text>')
+            p.append(f'{pad}    <text x="10" y="{by}" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>')
+            p.append(f'{pad}    <text x="28" y="{by}" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">{esc(cname)}</text>')
         else:
-            p.append(f'{pad}    <text x="14" y="{by}" class="column-name">{esc(cname)}</text>')
+            p.append(f'{pad}    <text x="14" y="{by}" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">{esc(cname)}</text>')
         if ctype:
-            p.append(f'{pad}    <text x="{W_TABLE-10}" y="{by}" text-anchor="end" class="column-type">{esc(ctype)}</text>')
+            p.append(f'{pad}    <text x="{W_TABLE-10}" y="{by}" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">{esc(ctype)}</text>')
         p.append(f'{pad}  </g>')
         if i < len(cols) - 1:
             p.append(f'{pad}  <line x1="8" y1="{by+12}" x2="{W_TABLE-8}" y2="{by+12}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>')
@@ -460,11 +460,11 @@ def build_static_svg(L, order, tables, fkset, title):
     for e in L["E"]:
         r = route(e, L["x"], L["y"], L["W"], L["H"])
         parts.append(f'    <g class="relationship" data-from-table="{esc(e["f"])}" data-to-table="{esc(e["t"])}">')
-        parts.append(f'      <path d="{r["d"]}" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="{marker(e["fc"],0)}" marker-end="{marker(e["tc"],1)}"/>')
+        parts.append(f'      <path d="{r["d"]}" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="{marker(e["fc"],0)}" marker-end="{marker(e["tc"],1)}"/>')
         parts.append(f'      <rect x="{r["fbx"]:.0f}" y="{r["fby"]:.0f}" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>')
-        parts.append(f'      <text x="{r["ftx"]:.0f}" y="{r["fty"]:.0f}" text-anchor="middle" class="cardinality-label" fill="#64b5f6">{e["fc"]}</text>')
+        parts.append(f'      <text x="{r["ftx"]:.0f}" y="{r["fty"]:.0f}" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">{e["fc"]}</text>')
         parts.append(f'      <rect x="{r["tbx"]:.0f}" y="{r["tby"]:.0f}" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>')
-        parts.append(f'      <text x="{r["ttx"]:.0f}" y="{r["tty"]:.0f}" text-anchor="middle" class="cardinality-label" fill="#64b5f6">{e["tc"]}</text>')
+        parts.append(f'      <text x="{r["ttx"]:.0f}" y="{r["tty"]:.0f}" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">{e["tc"]}</text>')
         parts.append('    </g>')
     parts.append('  </g>')
     parts.append('  <g class="tables-layer">')

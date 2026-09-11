@@ -20,123 +20,123 @@
   <rect width="100%" height="100%" fill="#1e1e1e"/>
   <g class="relationships-layer">
     <g class="relationship" data-from-table="profiles" data-to-table="users">
-      <path d="M 970 296 C 903 296, 903 141, 837 141" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#one-line)" marker-end="url(#one-line)"/>
+      <path d="M 970 296 C 903 296, 903 141, 837 141" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#one-line)" marker-end="url(#one-line)"/>
       <rect x="930" y="272" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="942" y="286" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="942" y="286" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
       <rect x="853" y="117" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="865" y="131" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="865" y="131" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="addresses" data-to-table="users">
-      <path d="M 739 519 C 691 519, 885 141, 837 141" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 739 519 C 691 519, 885 141, 837 141" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="699" y="495" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="711" y="509" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="711" y="509" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="853" y="117" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="865" y="131" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="865" y="131" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="products" data-to-table="categories">
-      <path d="M 320 730 C 365 730, 356 864, 401 864" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 320 730 C 365 730, 356 864, 401 864" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="336" y="706" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="348" y="720" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="348" y="720" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="361" y="840" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="373" y="854" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="373" y="854" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="product_tags" data-to-table="products">
-      <path d="M 582 343 C 451 343, 451 704, 320 704" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 582 343 C 451 343, 451 704, 320 704" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="542" y="319" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="554" y="333" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="554" y="333" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="336" y="680" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="348" y="694" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="348" y="694" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="product_tags" data-to-table="tags">
-      <path d="M 582 369 C 513 369, 513 180, 444 180" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 582 369 C 513 369, 513 180, 444 180" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="542" y="345" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="554" y="359" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="554" y="359" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="460" y="156" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="472" y="170" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="472" y="170" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="orders" data-to-table="users">
-      <path d="M 640 610 C 685 610, 552 141, 597 141" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 640 610 C 685 610, 552 141, 597 141" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="656" y="586" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="668" y="600" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="668" y="600" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="557" y="117" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="569" y="131" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="569" y="131" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="orders" data-to-table="addresses">
-      <path d="M 640 636 C 690 636, 690 493, 739 493" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 640 636 C 690 636, 690 493, 739 493" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="656" y="612" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="668" y="626" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="668" y="626" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="699" y="469" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="711" y="483" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="711" y="483" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="orders" data-to-table="addresses">
-      <path d="M 640 662 C 690 662, 690 493, 739 493" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 640 662 C 690 662, 690 493, 739 493" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="656" y="638" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="668" y="652" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="668" y="652" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="699" y="469" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="711" y="483" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="711" y="483" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="order_items" data-to-table="orders">
-      <path d="M 728 1001 C 683 1001, 685 584, 640 584" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 728 1001 C 683 1001, 685 584, 640 584" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="688" y="977" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="700" y="991" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="700" y="991" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="656" y="560" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="668" y="574" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="668" y="574" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="order_items" data-to-table="products">
-      <path d="M 728 1027 C 568 1027, 480 704, 320 704" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 728 1027 C 568 1027, 480 704, 320 704" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="688" y="1003" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="700" y="1017" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="700" y="1017" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="336" y="680" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="348" y="694" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="348" y="694" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="payments" data-to-table="orders">
-      <path d="M 778 773 C 709 773, 709 584, 640 584" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 778 773 C 709 773, 709 584, 640 584" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="738" y="749" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="750" y="763" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="750" y="763" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="656" y="560" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="668" y="574" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="668" y="574" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="shipments" data-to-table="orders">
-      <path d="M 1059 498 C 899 498, 800 584, 640 584" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 1059 498 C 899 498, 800 584, 640 584" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="1019" y="474" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="1031" y="488" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="1031" y="488" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="656" y="560" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="668" y="574" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="668" y="574" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="shipments" data-to-table="carriers">
-      <path d="M 1299 524 C 1362 524, 1362 529, 1425 529" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 1299 524 C 1362 524, 1362 529, 1425 529" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="1315" y="500" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="1327" y="514" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="1327" y="514" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="1385" y="505" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="1397" y="519" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="1397" y="519" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="reviews" data-to-table="products">
-      <path d="M 262 356 C 217 356, 365 704, 320 704" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 262 356 C 217 356, 365 704, 320 704" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="222" y="332" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="234" y="346" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="234" y="346" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="336" y="680" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="348" y="694" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="348" y="694" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="reviews" data-to-table="users">
-      <path d="M 502 382 C 549 382, 549 141, 597 141" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 502 382 C 549 382, 549 141, 597 141" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="518" y="358" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="530" y="372" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="530" y="372" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="557" y="117" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="569" y="131" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="569" y="131" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="inventory" data-to-table="products">
-      <path d="M 398 1092 C 353 1092, 365 704, 320 704" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 398 1092 C 353 1092, 365 704, 320 704" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="358" y="1068" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="370" y="1082" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="370" y="1082" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="336" y="680" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="348" y="694" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="348" y="694" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
     <g class="relationship" data-from-table="inventory" data-to-table="warehouses">
-      <path d="M 638 1118 C 705 1118, 705 1203, 773 1203" class="relation-line" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
+      <path d="M 638 1118 C 705 1118, 705 1203, 773 1203" class="relation-line" fill="none" stroke="#64b5f6" stroke-opacity="0.6" stroke-width="2" marker-start="url(#many-crow)" marker-end="url(#one-line)"/>
       <rect x="654" y="1094" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="666" y="1108" text-anchor="middle" class="cardinality-label" fill="#64b5f6">N</text>
+      <text x="666" y="1108" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">N</text>
       <rect x="733" y="1179" width="24" height="20" rx="4" fill="#2a2a2a" stroke="#64b5f6" stroke-width="1" opacity="0.9"/>
-      <text x="745" y="1193" text-anchor="middle" class="cardinality-label" fill="#64b5f6">1</text>
+      <text x="745" y="1193" text-anchor="middle" class="cardinality-label" fill="#64b5f6" font-size="14" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">1</text>
     </g>
   </g>
   <g class="tables-layer">
@@ -144,527 +144,527 @@
       <rect class="table-bg" x="0" y="0" width="240" height="162" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">users</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">users</text>
       <g class="column" data-table="users" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="users" data-column="email">
-        <text x="14" y="87" class="column-name">email</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">email</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="users" data-column="display_name">
-        <text x="14" y="113" class="column-name">display_name</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">display_name</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="users" data-column="created_at">
-        <text x="14" y="139" class="column-name">created_at</text>
-        <text x="230" y="139" text-anchor="end" class="column-type">datetime</text>
+        <text x="14" y="139" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">created_at</text>
+        <text x="230" y="139" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">datetime</text>
       </g>
     </g>
     <g class="table draggable" data-table="profiles" transform="translate(970,209)">
       <rect class="table-bg" x="0" y="0" width="240" height="162" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">profiles</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">profiles</text>
       <g class="column" data-table="profiles" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="profiles" data-column="user_id">
-        <text x="10" y="87" class="fk-icon">&#128279;</text>
-        <text x="28" y="87" class="column-name">user_id</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="87" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">user_id</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="profiles" data-column="bio">
-        <text x="14" y="113" class="column-name">bio</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">bio</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="profiles" data-column="avatar_url">
-        <text x="14" y="139" class="column-name">avatar_url</text>
-        <text x="230" y="139" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="139" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">avatar_url</text>
+        <text x="230" y="139" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
     </g>
     <g class="table draggable" data-table="addresses" transform="translate(739,432)">
       <rect class="table-bg" x="0" y="0" width="240" height="214" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">addresses</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">addresses</text>
       <g class="column" data-table="addresses" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="addresses" data-column="user_id">
-        <text x="10" y="87" class="fk-icon">&#128279;</text>
-        <text x="28" y="87" class="column-name">user_id</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="87" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">user_id</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="addresses" data-column="line1">
-        <text x="14" y="113" class="column-name">line1</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">line1</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="addresses" data-column="city">
-        <text x="14" y="139" class="column-name">city</text>
-        <text x="230" y="139" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="139" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">city</text>
+        <text x="230" y="139" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="addresses" data-column="country">
-        <text x="14" y="165" class="column-name">country</text>
-        <text x="230" y="165" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="165" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">country</text>
+        <text x="230" y="165" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="177" x2="232" y2="177" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="176" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="addresses" data-column="postcode">
-        <text x="14" y="191" class="column-name">postcode</text>
-        <text x="230" y="191" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="191" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">postcode</text>
+        <text x="230" y="191" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
     </g>
     <g class="table draggable" data-table="categories" transform="translate(401,803)">
       <rect class="table-bg" x="0" y="0" width="240" height="162" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">categories</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">categories</text>
       <g class="column" data-table="categories" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="categories" data-column="parent_id">
-        <text x="10" y="87" class="fk-icon">&#128279;</text>
-        <text x="28" y="87" class="column-name">parent_id</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="87" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">parent_id</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="categories" data-column="name">
-        <text x="14" y="113" class="column-name">name</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">name</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="categories" data-column="slug">
-        <text x="14" y="139" class="column-name">slug</text>
-        <text x="230" y="139" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="139" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">slug</text>
+        <text x="230" y="139" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
     </g>
     <g class="table draggable" data-table="products" transform="translate(80,643)">
       <rect class="table-bg" x="0" y="0" width="240" height="240" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">products</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">products</text>
       <g class="column" data-table="products" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="products" data-column="category_id">
-        <text x="10" y="87" class="fk-icon">&#128279;</text>
-        <text x="28" y="87" class="column-name">category_id</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="87" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">category_id</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="products" data-column="sku">
-        <text x="14" y="113" class="column-name">sku</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">sku</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="products" data-column="title">
-        <text x="14" y="139" class="column-name">title</text>
-        <text x="230" y="139" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="139" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">title</text>
+        <text x="230" y="139" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="products" data-column="price">
-        <text x="14" y="165" class="column-name">price</text>
-        <text x="230" y="165" text-anchor="end" class="column-type">decimal</text>
+        <text x="14" y="165" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">price</text>
+        <text x="230" y="165" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">decimal</text>
       </g>
       <line x1="8" y1="177" x2="232" y2="177" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="176" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="products" data-column="weight">
-        <text x="14" y="191" class="column-name">weight</text>
-        <text x="230" y="191" text-anchor="end" class="column-type">float</text>
+        <text x="14" y="191" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">weight</text>
+        <text x="230" y="191" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">float</text>
       </g>
       <line x1="8" y1="203" x2="232" y2="203" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="products" data-column="created_at">
-        <text x="14" y="217" class="column-name">created_at</text>
-        <text x="230" y="217" text-anchor="end" class="column-type">datetime</text>
+        <text x="14" y="217" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">created_at</text>
+        <text x="230" y="217" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">datetime</text>
       </g>
     </g>
     <g class="table draggable" data-table="tags" transform="translate(204,119)">
       <rect class="table-bg" x="0" y="0" width="240" height="110" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">tags</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">tags</text>
       <g class="column" data-table="tags" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="tags" data-column="name">
-        <text x="14" y="87" class="column-name">name</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">name</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
     </g>
     <g class="table draggable" data-table="product_tags" transform="translate(582,282)">
       <rect class="table-bg" x="0" y="0" width="240" height="110" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">product_tags</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">product_tags</text>
       <g class="column" data-table="product_tags" data-column="product_id">
-        <text x="10" y="61" class="fk-icon">&#128279;</text>
-        <text x="28" y="61" class="column-name">product_id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">product_id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="product_tags" data-column="tag_id">
-        <text x="10" y="87" class="fk-icon">&#128279;</text>
-        <text x="28" y="87" class="column-name">tag_id</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="87" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">tag_id</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
     </g>
     <g class="table draggable" data-table="orders" transform="translate(400,523)">
       <rect class="table-bg" x="0" y="0" width="240" height="240" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">orders</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">orders</text>
       <g class="column" data-table="orders" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="orders" data-column="user_id">
-        <text x="10" y="87" class="fk-icon">&#128279;</text>
-        <text x="28" y="87" class="column-name">user_id</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="87" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">user_id</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="orders" data-column="shipping_address_id">
-        <text x="10" y="113" class="fk-icon">&#128279;</text>
-        <text x="28" y="113" class="column-name">shipping_address_id</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="113" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">shipping_address_id</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="orders" data-column="billing_address_id">
-        <text x="10" y="139" class="fk-icon">&#128279;</text>
-        <text x="28" y="139" class="column-name">billing_address_id</text>
-        <text x="230" y="139" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="139" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="139" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">billing_address_id</text>
+        <text x="230" y="139" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="orders" data-column="status">
-        <text x="14" y="165" class="column-name">status</text>
-        <text x="230" y="165" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="165" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">status</text>
+        <text x="230" y="165" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="177" x2="232" y2="177" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="176" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="orders" data-column="total">
-        <text x="14" y="191" class="column-name">total</text>
-        <text x="230" y="191" text-anchor="end" class="column-type">decimal</text>
+        <text x="14" y="191" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">total</text>
+        <text x="230" y="191" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">decimal</text>
       </g>
       <line x1="8" y1="203" x2="232" y2="203" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="orders" data-column="placed_at">
-        <text x="14" y="217" class="column-name">placed_at</text>
-        <text x="230" y="217" text-anchor="end" class="column-type">datetime</text>
+        <text x="14" y="217" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">placed_at</text>
+        <text x="230" y="217" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">datetime</text>
       </g>
     </g>
     <g class="table draggable" data-table="order_items" transform="translate(728,914)">
       <rect class="table-bg" x="0" y="0" width="240" height="188" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">order_items</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">order_items</text>
       <g class="column" data-table="order_items" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="order_items" data-column="order_id">
-        <text x="10" y="87" class="fk-icon">&#128279;</text>
-        <text x="28" y="87" class="column-name">order_id</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="87" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">order_id</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="order_items" data-column="product_id">
-        <text x="10" y="113" class="fk-icon">&#128279;</text>
-        <text x="28" y="113" class="column-name">product_id</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="113" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">product_id</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="order_items" data-column="quantity">
-        <text x="14" y="139" class="column-name">quantity</text>
-        <text x="230" y="139" text-anchor="end" class="column-type">int</text>
+        <text x="14" y="139" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">quantity</text>
+        <text x="230" y="139" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">int</text>
       </g>
       <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="order_items" data-column="unit_price">
-        <text x="14" y="165" class="column-name">unit_price</text>
-        <text x="230" y="165" text-anchor="end" class="column-type">decimal</text>
+        <text x="14" y="165" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">unit_price</text>
+        <text x="230" y="165" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">decimal</text>
       </g>
     </g>
     <g class="table draggable" data-table="payments" transform="translate(778,686)">
       <rect class="table-bg" x="0" y="0" width="240" height="188" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">payments</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">payments</text>
       <g class="column" data-table="payments" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="payments" data-column="order_id">
-        <text x="10" y="87" class="fk-icon">&#128279;</text>
-        <text x="28" y="87" class="column-name">order_id</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="87" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">order_id</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="payments" data-column="method">
-        <text x="14" y="113" class="column-name">method</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">method</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="payments" data-column="amount">
-        <text x="14" y="139" class="column-name">amount</text>
-        <text x="230" y="139" text-anchor="end" class="column-type">decimal</text>
+        <text x="14" y="139" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">amount</text>
+        <text x="230" y="139" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">decimal</text>
       </g>
       <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="payments" data-column="paid_at">
-        <text x="14" y="165" class="column-name">paid_at</text>
-        <text x="230" y="165" text-anchor="end" class="column-type">datetime</text>
+        <text x="14" y="165" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">paid_at</text>
+        <text x="230" y="165" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">datetime</text>
       </g>
     </g>
     <g class="table draggable" data-table="carriers" transform="translate(1425,468)">
       <rect class="table-bg" x="0" y="0" width="240" height="136" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">carriers</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">carriers</text>
       <g class="column" data-table="carriers" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="carriers" data-column="name">
-        <text x="14" y="87" class="column-name">name</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">name</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="carriers" data-column="tracking_url">
-        <text x="14" y="113" class="column-name">tracking_url</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">tracking_url</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
     </g>
     <g class="table draggable" data-table="shipments" transform="translate(1059,411)">
       <rect class="table-bg" x="0" y="0" width="240" height="188" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">shipments</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">shipments</text>
       <g class="column" data-table="shipments" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="shipments" data-column="order_id">
-        <text x="10" y="87" class="fk-icon">&#128279;</text>
-        <text x="28" y="87" class="column-name">order_id</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="87" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">order_id</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="shipments" data-column="carrier_id">
-        <text x="10" y="113" class="fk-icon">&#128279;</text>
-        <text x="28" y="113" class="column-name">carrier_id</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="113" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">carrier_id</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="shipments" data-column="tracking_no">
-        <text x="14" y="139" class="column-name">tracking_no</text>
-        <text x="230" y="139" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="139" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">tracking_no</text>
+        <text x="230" y="139" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="shipments" data-column="shipped_at">
-        <text x="14" y="165" class="column-name">shipped_at</text>
-        <text x="230" y="165" text-anchor="end" class="column-type">datetime</text>
+        <text x="14" y="165" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">shipped_at</text>
+        <text x="230" y="165" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">datetime</text>
       </g>
     </g>
     <g class="table draggable" data-table="reviews" transform="translate(262,269)">
       <rect class="table-bg" x="0" y="0" width="240" height="214" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">reviews</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">reviews</text>
       <g class="column" data-table="reviews" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="reviews" data-column="product_id">
-        <text x="10" y="87" class="fk-icon">&#128279;</text>
-        <text x="28" y="87" class="column-name">product_id</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="87" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">product_id</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="reviews" data-column="user_id">
-        <text x="10" y="113" class="fk-icon">&#128279;</text>
-        <text x="28" y="113" class="column-name">user_id</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="113" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">user_id</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="reviews" data-column="rating">
-        <text x="14" y="139" class="column-name">rating</text>
-        <text x="230" y="139" text-anchor="end" class="column-type">int</text>
+        <text x="14" y="139" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">rating</text>
+        <text x="230" y="139" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">int</text>
       </g>
       <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="reviews" data-column="body">
-        <text x="14" y="165" class="column-name">body</text>
-        <text x="230" y="165" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="165" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">body</text>
+        <text x="230" y="165" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="177" x2="232" y2="177" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="176" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="reviews" data-column="created_at">
-        <text x="14" y="191" class="column-name">created_at</text>
-        <text x="230" y="191" text-anchor="end" class="column-type">datetime</text>
+        <text x="14" y="191" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">created_at</text>
+        <text x="230" y="191" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">datetime</text>
       </g>
     </g>
     <g class="table draggable" data-table="warehouses" transform="translate(773,1142)">
       <rect class="table-bg" x="0" y="0" width="240" height="136" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">warehouses</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">warehouses</text>
       <g class="column" data-table="warehouses" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="warehouses" data-column="name">
-        <text x="14" y="87" class="column-name">name</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">name</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="warehouses" data-column="region">
-        <text x="14" y="113" class="column-name">region</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">region</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
     </g>
     <g class="table draggable" data-table="inventory" transform="translate(398,1005)">
       <rect class="table-bg" x="0" y="0" width="240" height="188" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">inventory</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">inventory</text>
       <g class="column" data-table="inventory" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="inventory" data-column="product_id">
-        <text x="10" y="87" class="fk-icon">&#128279;</text>
-        <text x="28" y="87" class="column-name">product_id</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="87" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">product_id</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="inventory" data-column="warehouse_id">
-        <text x="10" y="113" class="fk-icon">&#128279;</text>
-        <text x="28" y="113" class="column-name">warehouse_id</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="113" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
+        <text x="28" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">warehouse_id</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="inventory" data-column="on_hand">
-        <text x="14" y="139" class="column-name">on_hand</text>
-        <text x="230" y="139" text-anchor="end" class="column-type">int</text>
+        <text x="14" y="139" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">on_hand</text>
+        <text x="230" y="139" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">int</text>
       </g>
       <line x1="8" y1="151" x2="232" y2="151" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="inventory" data-column="reserved">
-        <text x="14" y="165" class="column-name">reserved</text>
-        <text x="230" y="165" text-anchor="end" class="column-type">int</text>
+        <text x="14" y="165" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">reserved</text>
+        <text x="230" y="165" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">int</text>
       </g>
     </g>
     <g class="table draggable" data-table="audit_log" transform="translate(80,1438)">
       <rect class="table-bg" x="0" y="0" width="240" height="162" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">audit_log</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">audit_log</text>
       <g class="column" data-table="audit_log" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="audit_log" data-column="entity">
-        <text x="14" y="87" class="column-name">entity</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">entity</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="audit_log" data-column="action">
-        <text x="14" y="113" class="column-name">action</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">action</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="125" x2="232" y2="125" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="124" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="audit_log" data-column="at">
-        <text x="14" y="139" class="column-name">at</text>
-        <text x="230" y="139" text-anchor="end" class="column-type">datetime</text>
+        <text x="14" y="139" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">at</text>
+        <text x="230" y="139" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">datetime</text>
       </g>
     </g>
     <g class="table draggable" data-table="settings" transform="translate(400,1438)">
       <rect class="table-bg" x="0" y="0" width="240" height="136" fill="#2a2a2a" stroke="#3498db" stroke-width="2" rx="8" ry="8" filter="url(#shadow)"/>
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
-      <text x="120" y="24" text-anchor="middle" class="table-header">settings</text>
+      <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">settings</text>
       <g class="column" data-table="settings" data-column="id">
-        <text x="10" y="61" class="pk-icon">PK</text>
-        <text x="30" y="61" class="column-name">id</text>
-        <text x="230" y="61" text-anchor="end" class="column-type">bigint</text>
+        <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+        <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
+        <text x="230" y="61" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">bigint</text>
       </g>
       <line x1="8" y1="73" x2="232" y2="73" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <rect x="2" y="72" width="236" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
       <g class="column" data-table="settings" data-column="key">
-        <text x="14" y="87" class="column-name">key</text>
-        <text x="230" y="87" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="87" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">key</text>
+        <text x="230" y="87" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
       <line x1="8" y1="99" x2="232" y2="99" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
       <g class="column" data-table="settings" data-column="value">
-        <text x="14" y="113" class="column-name">value</text>
-        <text x="230" y="113" text-anchor="end" class="column-type">varchar</text>
+        <text x="14" y="113" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">value</text>
+        <text x="230" y="113" text-anchor="end" class="column-type" fill="#8a8a8a" font-size="10" font-family="Segoe UI, Arial, sans-serif">varchar</text>
       </g>
     </g>
   </g>
