@@ -390,6 +390,9 @@ def table_markup(name, cols, x, y, fkset, pad="    "):
     p.append(f'{pad}  <rect class="table-header-bg" x="0" y="0" width="{W_TABLE}" height="{HEADER_H}" fill="#3498db" rx="8" ry="8"/>')
     p.append(f'{pad}  <rect x="0" y="{HEADER_H-8}" width="{W_TABLE}" height="8" fill="#3498db"/>')
     p.append(f'{pad}  <text x="{W_TABLE//2}" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">{esc(name)}</text>')
+    p.append(f'{pad}  <rect class="heat-bar" x="0" y="{HEADER_H}" width="{W_TABLE}" height="6" fill="#000" style="display:none"/>')
+    p.append(f'{pad}  <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/>'
+             f'<text class="hb-text" x="{W_TABLE-9}" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>')
     for i, (cname, ctype, pk) in enumerate(cols):
         by = col_offset(i)
         if i % 2 == 1:
@@ -502,6 +505,12 @@ HTML_TPL = r'''<!DOCTYPE html>
   #side a:hover{ background:#333; }
   #side a small{ color:#888; }
   svg#svg{ display:block; width:100%; height:100%; }
+  #legend{ position:absolute; left:14px; bottom:14px; background:rgba(30,30,30,.92); border:1px solid var(--line);
+    border-radius:8px; padding:8px 10px; font-size:11px; color:#bbb; display:none; pointer-events:none; min-width:190px; }
+  #legend.on{ display:block; }
+  #legend .lg-title{ color:#ddd; margin-bottom:6px; }
+  #legend .lg-bar{ height:8px; border-radius:4px; }
+  #legend .lg-scale{ display:flex; justify-content:space-between; margin-top:4px; font-variant-numeric:tabular-nums; }
   g.table{ cursor:pointer; }
   g.relationship{ transition:opacity .12s; }
   g.relationship.dim{ opacity:.045; }
@@ -524,6 +533,12 @@ HTML_TPL = r'''<!DOCTYPE html>
   <label title="Snap tables to a grid while dragging">Snap
     <select id="snap"><option value="0">off</option><option value="10">10</option><option value="20" selected>20</option><option value="26">26</option><option value="50">50</option></select>
   </label>
+  <span style="width:1px;height:22px;background:var(--line);margin:0 2px;"></span>
+  <label title="Colour tables by a metric from stats.json">Heat
+    <select id="heat"><option value="off" selected>off</option><option value="rows">rows</option><option value="writes">writes</option><option value="size">size</option></select>
+  </label>
+  <button id="statsbtn" title="Load stats.json (or drop it on the page)">Stats&#8230;</button>
+  <input id="statsfile" type="file" accept=".json,application/json" style="display:none">
   <button id="focusbtn" title="Show the selected table on its own with its direct links (double-click a table)">Focus</button>
   <button id="backbtn" class="primary" style="display:none" title="Back to the full schema (Esc)">&#9664; Back to schema</button>
   <button id="save">Export SVG</button>
@@ -542,6 +557,7 @@ __TABLES__
       </g>
     </g>
   </svg>
+  <div id="legend"><div class="lg-title"></div><div class="lg-bar"></div><div class="lg-scale"><span class="lg-min"></span><span class="lg-max"></span></div></div>
 </div>
 <div id="side">
   <h3 id="s-title">Select a table</h3>
@@ -822,7 +838,102 @@ document.getElementById('save').onclick=()=>{lock=null;clear();
   const gr=clone.querySelector('#gridrect'); if(gr) gr.remove();
   const s='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(clone);
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'})); a.download='__TITLE___untangled.svg'; a.click();};
+// ================= STATS / HEATMAP (offline: a stats.json, no server) =================
+let STATS={}, STATS_META={}, HEAT='off';
+const W_CARD=240;
+const HEAT_GRAD={ rows:['#2b5c8f','#4a3b89','#9c27b0'], size:['#20505f','#2e7d6b','#7cb342'],
+                  writes:['#27ae60','#f39c12','#e74c3c'] };
+function lerpHex(a,b,f){ const pa=a.match(/[0-9a-f]{2}/gi).map(h=>parseInt(h,16)),
+  pb=b.match(/[0-9a-f]{2}/gi).map(h=>parseInt(h,16));
+  const c=[0,1,2].map(i=>Math.round(pa[i]+f*(pb[i]-pa[i]))); return 'rgb('+c[0]+','+c[1]+','+c[2]+')'; }
+function heatColor(f,mode){ const g=HEAT_GRAD[mode]||HEAT_GRAD.rows;
+  return f<0.5?lerpHex(g[0],g[1],f*2):lerpHex(g[1],g[2],(f-0.5)*2); }
+function fmtNum(v,mode){
+  if(v===undefined||v===null||isNaN(v)) return '-';
+  if(mode==='size'){ const u=['MB','GB','TB']; let i=0,x=v; while(x>=1024&&i<u.length-1){x/=1024;i++;}
+    return (x<10?x.toFixed(1):Math.round(x))+' '+u[i]; }
+  if(v>=1e9) return (v/1e9).toFixed(1)+'B';
+  if(v>=1e6) return (v/1e6).toFixed(1)+'M';
+  if(v>=1e3) return (v/1e3).toFixed(1)+'k';
+  return String(Math.round(v*100)/100);
+}
+const logf=(v,lo,hi)=>{ const L=Math.log10(Math.max(v,0)+1), a=Math.log10(Math.max(lo,0)+1), b=Math.log10(Math.max(hi,0)+1);
+  return b<=a?0.5:Math.max(0,Math.min(1,(L-a)/(b-a))); };
+function normStats(json){
+  const src=(json&&typeof json==='object'&&json.tables)?json.tables:json;
+  const pick=(v,names)=>{ for(const n of names){ const x=v[n];
+    if(x!==undefined&&x!==null&&x!==''&&!isNaN(Number(x))) return Number(x); } return undefined; };
+  const out={};
+  for(const k in src){ const v=src[k];
+    if(typeof v==='number'){ out[k]={rows:v}; continue; }
+    if(!v||typeof v!=='object') continue;
+    out[k]={ rows:pick(v,['rows','rowCount','row_count','n_live_tup','live_rows','count']),
+             writes:pick(v,['writes','writesPerSec','writes_per_sec','total_writes','write_ops','mutations']),
+             size:pick(v,['size','size_mb','sizeMb','size_bytes','bytes','total_bytes','total_size_mb']) }; }
+  return {stats:out, meta:{period:json&&json.period, generated:json&&(json.generated_at||json.timestamp)}};
+}
+function matchStats(raw){
+  const idx={}; Object.keys(T).forEach(n=>{ idx[n.toLowerCase()]=n; });
+  const bare=k=>String(k).replace(/["`]/g,'').replace(/^.*\./,'').toLowerCase();
+  const matched={}, unknown=[];
+  Object.keys(raw).forEach(k=>{ const hit=T[k]?k:(idx[String(k).toLowerCase()]||idx[bare(k)]);
+    if(hit) matched[hit]=raw[k]; else unknown.push(k); });
+  return {matched,unknown};
+}
+function loadStats(json,label){
+  const {stats,meta}=normStats(json); const {matched,unknown}=matchStats(stats);
+  STATS=matched; STATS_META=meta;
+  const withData=Object.keys(matched).length, total=Object.keys(T).length;
+  if(HEAT==='off'){ const pick=['rows','writes','size'].find(m=>Object.values(matched).some(v=>v[m]!==undefined));
+    if(pick){ HEAT=pick; document.getElementById('heat').value=pick; } }
+  applyHeat();
+  let msg=(label?label+': ':'')+'matched '+withData+'/'+total+' tables';
+  if(total-withData) msg+=' - '+(total-withData)+' without data';
+  if(unknown.length) msg+=' - '+unknown.length+' unknown ('+unknown.slice(0,3).join(', ')+(unknown.length>3?'...':'')+')';
+  flash(msg);
+}
+function applyHeat(){
+  const legend=document.getElementById('legend'); if(!legend) return;
+  const names=Object.keys(T);
+  const off = HEAT==='off' || !Object.keys(STATS).length;
+  let lo=Infinity, hi=-Infinity;
+  if(!off) names.forEach(n=>{ const v=STATS[n]&&STATS[n][HEAT];
+    if(v!==undefined&&!isNaN(v)){ lo=Math.min(lo,v); hi=Math.max(hi,v); } });
+  if(!isFinite(lo)){ lo=0; hi=0; }
+  names.forEach(n=>{
+    const g=T[n].el; if(!g) return;
+    const bar=g.querySelector('.heat-bar'), badge=g.querySelector('.heat-badge');
+    if(!bar||!badge) return;
+    const v= off?undefined:(STATS[n]?STATS[n][HEAT]:undefined);
+    if(v===undefined||isNaN(v)){ bar.style.display='none'; badge.style.display='none'; return; }
+    bar.setAttribute('fill',heatColor(logf(v,lo,hi),HEAT)); bar.style.display='';
+    const t=badge.querySelector('.hb-text'), chip=badge.querySelector('.hb-chip');
+    t.textContent=fmtNum(v,HEAT);
+    const w=t.textContent.length*6+12;
+    chip.setAttribute('x',W_CARD-9-w+4); chip.setAttribute('width',w);
+    badge.style.display='';
+  });
+  if(off){ legend.classList.remove('on'); return; }
+  legend.classList.add('on');
+  const g=HEAT_GRAD[HEAT];
+  legend.querySelector('.lg-bar').style.background='linear-gradient(90deg,'+g[0]+','+g[1]+','+g[2]+')';
+  legend.querySelector('.lg-title').textContent=
+    ({rows:'Rows',writes:'Write activity',size:'Size'})[HEAT]+(STATS_META.period?' - '+STATS_META.period:'')+' (log scale)';
+  legend.querySelector('.lg-min').textContent=fmtNum(lo,HEAT);
+  legend.querySelector('.lg-max').textContent=fmtNum(hi,HEAT);
+}
+document.getElementById('heat').addEventListener('change',e=>{ HEAT=e.target.value; applyHeat(); });
+document.getElementById('statsbtn').onclick=()=>document.getElementById('statsfile').click();
+document.getElementById('statsfile').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f)return; e.target.value='';
+  const r=new FileReader(); r.onload=()=>{ try{ loadStats(JSON.parse(r.result),f.name); }catch(err){ alert('Not valid JSON: '+err.message); } };
+  r.readAsText(f); });
+['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault()));
+document.addEventListener('drop',e=>{ e.preventDefault();
+  const f=Array.prototype.slice.call(e.dataTransfer.files||[]).find(x=>/\.json$/i.test(x.name)); if(!f) return;
+  const r=new FileReader(); r.onload=()=>{ try{ loadStats(JSON.parse(r.result),f.name); }catch(err){ alert('Not valid JSON: '+err.message); } };
+  r.readAsText(f); });
 fit();
+applyHeat();
 </script>
 </body>
 </html>'''

@@ -145,6 +145,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">users</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="users" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -173,6 +175,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">profiles</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="profiles" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -202,6 +206,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">addresses</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="addresses" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -242,6 +248,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">categories</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="categories" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -271,6 +279,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">products</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="products" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -316,6 +326,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">tags</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="tags" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -333,6 +345,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">product_tags</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="product_tags" data-column="product_id">
         <text x="10" y="61" class="fk-icon" fill="#64b5f6" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">&#128279;</text>
         <text x="28" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">product_id</text>
@@ -351,6 +365,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">orders</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="orders" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -398,6 +414,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">order_items</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="order_items" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -433,6 +451,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">payments</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="payments" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -467,6 +487,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">carriers</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="carriers" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -489,6 +511,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">shipments</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="shipments" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -524,6 +548,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">reviews</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="reviews" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -565,6 +591,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">warehouses</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="warehouses" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -587,6 +615,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">inventory</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="inventory" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -622,6 +652,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">audit_log</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="audit_log" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>
@@ -650,6 +682,8 @@
       <rect class="table-header-bg" x="0" y="0" width="240" height="38" fill="#3498db" rx="8" ry="8"/>
       <rect x="0" y="30" width="240" height="8" fill="#3498db"/>
       <text x="120" y="24" text-anchor="middle" class="table-header" fill="#ffffff" font-size="13" font-weight="600" font-family="Segoe UI, Arial, sans-serif">settings</text>
+      <rect class="heat-bar" x="0" y="38" width="240" height="6" fill="#000" style="display:none"/>
+      <g class="heat-badge" style="display:none"><rect class="hb-chip" x="0" y="11" width="0" height="16" rx="8" fill="rgba(0,0,0,0.42)"/><text class="hb-text" x="231" y="23" text-anchor="end" fill="#ffffff" font-size="10" font-weight="600" font-family="Segoe UI, Arial, sans-serif"></text></g>
       <g class="column" data-table="settings" data-column="id">
         <text x="10" y="61" class="pk-icon" fill="#ffd700" font-size="9" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
         <text x="30" y="61" class="column-name" fill="#e0e0e0" font-size="11" font-family="Segoe UI, Arial, sans-serif">id</text>

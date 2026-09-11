@@ -23,6 +23,7 @@ Need a closer look at one table? Double-click it — what points at it on the le
 - **Untangled layout** — force-directed placement; multiple random seeds are tried and the one with the fewest line crossings wins. Hub tables drift to the center, satellites cluster around them, isolated tables get their own tidy row.
 - **Click to highlight** — select a table and only its links stay lit; the rest fades. A side panel shows linked tables split into *References (N→1)* and *Referenced by (1→N)*, each with the exact `column → table.column`.
 - **Focus one table** — double-click a table (or select it and hit **Focus**) to see it on its own, laid out for reading: the table in full in the middle, everything that *points at it* on the left, everything it *points to* on the right, all other tables and lines hidden. Neighbours are drawn as **compact cards showing only the linking column**, and they are packed into as many columns as it takes to keep the view screen-shaped — a hub with 45 links stays a readable 2880×1800 instead of a 16000px strip. **Click a link (or the card) to open that table in full** and click again to fold it back — the view stays put while you look. Double-click a neighbour (or click it in the side panel) to make it the new centre. **Back to schema** or **Esc** returns to the full diagram exactly as you left it — positions, manual placement, selection and zoom/pan. Exporting while focused writes just that neighbourhood.
+- **Heatmap from a stats.json** - colour the tables by **rows**, **write activity** or **size**: a strip under each header plus the value, on a logarithmic scale (a 10-row lookup and a 100M-row log have to stay distinguishable). Drop a `stats.json` next to the schema - no server, no credentials, nothing leaves the machine. Table names are matched loosely (`public.orders`, `"Orders"`, `ORDERS` all find `orders`) and you get a report: *matched 62/78 - 16 without data - 2 unknown names*. Ready-made queries that emit the JSON straight out of the database live in [`sql/`](sql/).
 - **Search** any table by name and jump to it.
 - **Navigation** — zoom with the mouse wheel (centred on the cursor), pan by dragging the canvas (left button on empty space, or middle button anywhere) — the view follows the cursor like a hand tool. No scrollbars; `+` / `−` / `Fit` buttons too.
 - **Merge several .dbml files** — drop more files (or **+ Add .dbml**) to grow the diagram: new tables are drawn in, tables that already exist are *updated, not duplicated*, and duplicate relationships are dropped. **The later file wins**, so re-exporting a changed schema on top of the current one just refreshes it. Existing tables keep their position — only the newcomers get placed, next to whatever they link to.
@@ -78,6 +79,37 @@ python dbml_to_er.py examples/sample.dbml --seeds 16
 ```
 
 Both paths share the same DBML parser and force-directed layout — the Python script and `index.html` are direct ports of each other.
+
+## Where stats.json comes from
+
+Nothing to install: the database can build the JSON itself. Run
+[`sql/postgres_now.sql`](sql/postgres_now.sql) (or `sql/mysql_now.sql`) in psql,
+pgAdmin or DBeaver, save the single returned cell as `stats.json`, and drop that
+file onto the diagram.
+
+```json
+{
+  "period": "2025-09-01 .. 2026-09-01",
+  "tables": {
+    "orders":    { "rows": 1450000,  "writes": 12034567, "size": 820 },
+    "audit_log": { "rows": 58000000, "writes": 85000000, "size": 3300 }
+  }
+}
+```
+
+`size` is in MB. Key aliases are accepted (`rowCount`, `row_count`, `n_live_tup`,
+`total_writes`, `size_mb`, ...), so output from your own query usually just works,
+and any metric you leave out simply gets no colour.
+
+**About periods.** A database keeps no history of its own: `pg_stat_user_tables`
+holds counters accumulated since the last `pg_stat_reset()`, and sizes are
+instantaneous. To get *"activity over the last year"* you have to collect
+snapshots and subtract one from another -
+[`sql/postgres_period.sql`](sql/postgres_period.sql) sets that up: a snapshot
+table, a one-line insert to run on a schedule, and a query that turns any two
+dates into a `stats.json`. If you already run monitoring (Zabbix, Prometheus +
+postgres_exporter, pgwatch, Performance Insights), export from there instead -
+the viewer only cares about the JSON shape above.
 
 ## DBML support
 
