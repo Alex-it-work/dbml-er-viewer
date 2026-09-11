@@ -82,10 +82,26 @@ Both paths share the same DBML parser and force-directed layout — the Python s
 
 ## Where stats.json comes from
 
-Nothing to install: the database can build the JSON itself. Run
-[`sql/postgres_now.sql`](sql/postgres_now.sql) (or `sql/mysql_now.sql`) in psql,
-pgAdmin or DBeaver, save the single returned cell as `stats.json`, and drop that
-file onto the diagram.
+Nothing to install: the database can build the JSON itself. Run the query for
+your engine, save the single returned cell as `stats.json`, and drop that file
+onto the diagram.
+
+| engine | snapshot | over a period |
+|---|---|---|
+| PostgreSQL | [`sql/postgres_now.sql`](sql/postgres_now.sql) | [`sql/postgres_period.sql`](sql/postgres_period.sql) |
+| SQL Server | [`sql/sqlserver_now.sql`](sql/sqlserver_now.sql) | [`sql/sqlserver_period.sql`](sql/sqlserver_period.sql) |
+| MySQL / MariaDB | [`sql/mysql_now.sql`](sql/mysql_now.sql) | — |
+
+On SQL Server the result shows up as a link in the SSMS grid — click it to get
+the full text. To write the file directly instead:
+
+```text
+sqlcmd -S SERVER -d BASE -E -i sql\sqlserver_now.sql -o stats.json -y 0 -h -1
+```
+
+Both the object form (`"tables": { "orders": {...} }`) and the list form that
+`FOR JSON PATH` produces (`"tables": [ { "table": "orders", ... } ]`) are
+accepted.
 
 ```json
 {
@@ -102,8 +118,8 @@ file onto the diagram.
 and any metric you leave out simply gets no colour.
 
 **About periods.** A database keeps no history of its own: `pg_stat_user_tables`
-holds counters accumulated since the last `pg_stat_reset()`, and sizes are
-instantaneous. To get *"activity over the last year"* you have to collect
+holds counters accumulated since the last `pg_stat_reset()`, SQL Server's
+`user_updates` resets when the service restarts, and sizes are instantaneous. To get *"activity over the last year"* you have to collect
 snapshots and subtract one from another -
 [`sql/postgres_period.sql`](sql/postgres_period.sql) sets that up: a snapshot
 table, a one-line insert to run on a schedule, and a query that turns any two

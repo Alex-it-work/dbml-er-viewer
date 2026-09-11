@@ -860,7 +860,10 @@ function fmtNum(v,mode){
 const logf=(v,lo,hi)=>{ const L=Math.log10(Math.max(v,0)+1), a=Math.log10(Math.max(lo,0)+1), b=Math.log10(Math.max(hi,0)+1);
   return b<=a?0.5:Math.max(0,Math.min(1,(L-a)/(b-a))); };
 function normStats(json){
-  const src=(json&&typeof json==='object'&&json.tables)?json.tables:json;
+  let src=(json&&typeof json==='object'&&json.tables)?json.tables:json;
+  if(Array.isArray(src)){          // FOR JSON PATH (SQL Server) and friends emit a list
+    const o={}; src.forEach(r=>{ const k=r&&(r.table||r.name||r.table_name||r.tableName||r.relname);
+      if(k) o[k]=r; }); src=o; }
   const pick=(v,names)=>{ for(const n of names){ const x=v[n];
     if(x!==undefined&&x!==null&&x!==''&&!isNaN(Number(x))) return Number(x); } return undefined; };
   const out={};
