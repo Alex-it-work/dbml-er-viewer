@@ -750,7 +750,8 @@ document.querySelectorAll('g.table').forEach(e=>{const n=e.getAttribute('data-ta
   e.addEventListener('dblclick',ev=>{ev.stopPropagation(); ev.preventDefault(); enterFocus(n);});});
 // (empty-canvas click clears the selection — handled in the pointerup handler below)
 const sTitle=document.getElementById('s-title'),sMeta=document.getElementById('s-meta'),sList=document.getElementById('s-list');
-function resetPanel(){sTitle.textContent='Select a table'; sMeta.textContent='Hover or click a table to see its relationships.'; sList.innerHTML='';}
+function resetPanel(){ if(typeof renderTop==='function'&&renderTop())return;
+  sTitle.textContent='Select a table'; sMeta.textContent='Hover or click a table to see its relationships.'; sList.innerHTML='';}
 function panel(name){
   const out=[],inc=[];
   DATA.rels.forEach(r=>{ if(r.f===name)out.push(r); else if(r.t===name)inc.push(r); });
@@ -839,7 +840,7 @@ document.getElementById('save').onclick=()=>{lock=null;clear();
   const s='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(clone);
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'})); a.download='__TITLE___untangled.svg'; a.click();};
 // ================= STATS / HEATMAP (offline: a stats.json, no server) =================
-let STATS={}, STATS_META={}, HEAT='off';
+let STATS={}, STATS_ALL={}, STATS_MAP={}, STATS_META={}, HEAT='off';
 const W_CARD=240;
 const HEAT_GRAD={ rows:['#2b5c8f','#4a3b89','#9c27b0'], size:['#20505f','#2e7d6b','#7cb342'],
                   writes:['#27ae60','#f39c12','#e74c3c'] };
@@ -878,18 +879,21 @@ function normStats(json){
 function matchStats(raw){
   const idx={}; Object.keys(T).forEach(n=>{ idx[n.toLowerCase()]=n; });
   const bare=k=>String(k).replace(/["`]/g,'').replace(/^.*\./,'').toLowerCase();
-  const matched={}, unknown=[];
+  const matched={}, unknown=[], map={};
   Object.keys(raw).forEach(k=>{ const hit=T[k]?k:(idx[String(k).toLowerCase()]||idx[bare(k)]);
+    map[k]=hit||null;
     if(hit) matched[hit]=raw[k]; else unknown.push(k); });
-  return {matched,unknown};
+  return {matched,unknown,map};
 }
 function loadStats(json,label){
-  const {stats,meta}=normStats(json); const {matched,unknown}=matchStats(stats);
-  STATS=matched; STATS_META=meta;
+  const {stats,meta}=normStats(json); const r=matchStats(stats);
+  const matched=r.matched, unknown=r.unknown;
+  STATS=matched; STATS_ALL=stats; STATS_MAP=r.map; STATS_META=meta;
   const withData=Object.keys(matched).length, total=Object.keys(T).length;
   if(HEAT==='off'){ const pick=['rows','writes','size'].find(m=>Object.values(matched).some(v=>v[m]!==undefined));
     if(pick){ HEAT=pick; document.getElementById('heat').value=pick; } }
   applyHeat();
+  if(!lock) resetPanel();
   let msg=(label?label+': ':'')+'matched '+withData+'/'+total+' tables';
   if(total-withData) msg+=' - '+(total-withData)+' without data';
   if(unknown.length) msg+=' - '+unknown.length+' unknown ('+unknown.slice(0,3).join(', ')+(unknown.length>3?'...':'')+')';
@@ -925,7 +929,32 @@ function applyHeat(){
   legend.querySelector('.lg-min').textContent=fmtNum(lo,HEAT);
   legend.querySelector('.lg-max').textContent=fmtNum(hi,HEAT);
 }
-document.getElementById('heat').addEventListener('change',e=>{ HEAT=e.target.value; applyHeat(); });
+function topMetric(){ return HEAT!=='off'?HEAT
+  :(['rows','writes','size'].find(m=>Object.values(STATS).some(v=>v[m]!==undefined))||null); }
+function renderTop(){
+  const m=topMetric(); if(!m||!Object.keys(STATS).length) return false;
+  const src=Object.keys(STATS_ALL).length?STATS_ALL:STATS;
+  const rows=Object.keys(src).map(n=>({n:n,v:src[n][m],t:STATS_MAP[n]||(T[n]?n:null)}))
+        .filter(r=>r.v!==undefined&&!isNaN(r.v)).sort((a,b)=>b.v-a.v).slice(0,30);
+  if(!rows.length) return false;
+  const max=rows[0].v||1;
+  const E=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  sTitle.textContent='Top tables';
+  sMeta.textContent=({rows:'by rows',writes:'by write activity',size:'by size'})[m]
+    +(STATS_META.period?' - '+STATS_META.period:'')+' - click one to see its links';
+  sList.innerHTML=rows.map((r,i)=>{ const f=logf(r.v,0,max), w=Math.max(3,Math.round(f*100));
+    return '<a data-top="'+E(r.t||'')+'" title="'+E(r.n)+'"'+(r.t?'':' style="opacity:.55"')+'>'
+      +'<span style="color:#666;display:inline-block;width:20px">'+(i+1)+'</span>'
+      +E(r.t||r.n)+(r.t?'':' <small style="color:#777">no links</small>')
+      +'<small style="float:right">'+fmtNum(r.v,m)+'</small>'
+      +'<div style="height:3px;border-radius:2px;margin-top:4px;background:'+heatColor(f,m)+';width:'+w+'%"></div></a>'; }).join('');
+  sList.querySelectorAll('a[data-top]').forEach(a=>a.addEventListener('click',ev=>{ ev.stopPropagation();
+    const n=a.getAttribute('data-top');
+    if(n&&T[n]) enterFocus(n);
+    else flash('no relations known for '+a.getAttribute('title')+' - merge the .dbml that describes it'); }));
+  return true;
+}
+document.getElementById('heat').addEventListener('change',e=>{ HEAT=e.target.value; applyHeat(); if(!lock) resetPanel(); });
 document.getElementById('statsbtn').onclick=()=>document.getElementById('statsfile').click();
 document.getElementById('statsfile').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f)return; e.target.value='';
   const r=new FileReader(); r.onload=()=>{ try{ loadStats(JSON.parse(r.result),f.name); }catch(err){ alert('Not valid JSON: '+err.message); } };
