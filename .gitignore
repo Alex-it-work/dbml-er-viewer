@@ -14,3 +14,7 @@ _gen_*
 # OS
 Thumbs.db
 .DS_Store
+
+# Real database statistics must never land in this public repo.
+stats*.json
+*.stats.json

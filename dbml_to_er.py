@@ -879,8 +879,16 @@ function normStats(json){
 function matchStats(raw){
   const idx={}; Object.keys(T).forEach(n=>{ idx[n.toLowerCase()]=n; });
   const bare=k=>String(k).replace(/["`]/g,'').replace(/^.*\./,'').toLowerCase();
+  // Dynamics AX keeps SQL table names to 30 characters: a longer name is cut and
+  // the table id appended (RMZ_CalculationMaterialCosts_ZTR -> RMZ_CALCULATIONMATERIALCO50619).
+  // Matched only when exactly one schema table fits, so it never guesses.
+  const axTrunc=k=>{ const m=String(k).replace(/["`]/g,'').replace(/^.*\./,'').match(/^(.+?)(\d+)$/);
+    if(!m||(m[1].length+m[2].length)!==30) return null;
+    const pre=m[1].toLowerCase();
+    const c=Object.keys(T).filter(n=>n.length>30&&n.toLowerCase().indexOf(pre)===0);
+    return c.length===1?c[0]:null; };
   const matched={}, unknown=[], map={};
-  Object.keys(raw).forEach(k=>{ const hit=T[k]?k:(idx[String(k).toLowerCase()]||idx[bare(k)]);
+  Object.keys(raw).forEach(k=>{ const hit=T[k]?k:(idx[String(k).toLowerCase()]||idx[bare(k)]||axTrunc(k));
     map[k]=hit||null;
     if(hit) matched[hit]=raw[k]; else unknown.push(k); });
   return {matched,unknown,map};
