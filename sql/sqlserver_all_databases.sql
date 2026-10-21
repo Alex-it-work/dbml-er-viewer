@@ -19,6 +19,10 @@
 -- ============================================================================
 SET NOCOUNT ON;
 
+-- когда запущена служба: tempdb пересоздаётся при каждом старте (работает на 2005+)
+DECLARE @started datetime;
+SELECT @started = create_date FROM sys.databases WHERE name = 'tempdb';
+
 IF OBJECT_ID('tempdb..#stats') IS NOT NULL DROP TABLE #stats;
 CREATE TABLE #stats (
     full_name nvarchar(400),
@@ -72,7 +76,10 @@ WITH r AS (
 SELECT line FROM (
     SELECT 0 AS part, 0 AS rn,
            CAST(N'{"generated_at":"' + CONVERT(nvarchar(30), GETDATE(), 126)
-              + N'","period":"since SQL Server service start","tables":{' AS nvarchar(4000)) AS line
+              + N'","server_started":"' + CONVERT(nvarchar(30), @started, 126)
+              + N'","uptime_days":' + CAST(CAST(DATEDIFF(minute, @started, GETDATE()) / 1440.0 AS decimal(10,1)) AS nvarchar(20))
+              + N',"period":"writes since SQL Server start ' + CONVERT(nvarchar(16), @started, 120)
+              + N'","tables":{' AS nvarchar(4000)) AS line
     UNION ALL
     SELECT 1, rn,
            CAST(CASE WHEN rn = 1 THEN N'' ELSE N',' END

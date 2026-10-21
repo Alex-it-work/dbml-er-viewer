@@ -757,6 +757,14 @@ function panel(name){
   DATA.rels.forEach(r=>{ if(r.f===name)out.push(r); else if(r.t===name)inc.push(r); });
   sTitle.textContent=name; sMeta.textContent=`${ADJ[name].size} linked tables · ${out.length+inc.length} relationships`;
   let h=''; const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const st=STATS[name];
+  if(st){   // all three numbers for the selected table, plus writes per day when the uptime is known
+    const perDay=(st.writes!==undefined&&STATS_META.uptime>0)?' ≈ '+fmtNum(st.writes/STATS_META.uptime,'writes')+'/day':'';
+    h+='<div class="grp">Load</div><div style="font-size:12px;line-height:1.6;color:#ccc;padding:0 7px">'
+      +'rows <b>'+fmtNum(st.rows,'rows')+'</b> · size <b>'+fmtNum(st.size,'size')+'</b><br>'
+      +'writes <b>'+fmtNum(st.writes,'writes')+'</b>'+perDay
+      +(STATS_META.started?'<br><small style="color:#888">'+esc(serverAge())+'</small>':'')+'</div>';
+  }
   const block=(title,arr,fn)=>{ if(!arr.length)return; h+=`<div class="grp">${title}</div>`;
     arr.slice().sort((a,b)=>fn(a).g.localeCompare(fn(b).g)).forEach(r=>{const o=fn(r);
       h+=`<a data-go="${esc(o.g)}">${esc(o.g)} <small>${o.card}</small><br><small>${esc(o.via)}</small></a>`;});};
@@ -874,7 +882,9 @@ function normStats(json){
     out[k]={ rows:pick(v,['rows','rowCount','row_count','n_live_tup','live_rows','count']),
              writes:pick(v,['writes','writesPerSec','writes_per_sec','total_writes','write_ops','mutations']),
              size:pick(v,['size','size_mb','sizeMb','size_bytes','bytes','total_bytes','total_size_mb']) }; }
-  return {stats:out, meta:{period:json&&json.period, generated:json&&(json.generated_at||json.timestamp)}};
+  const up=json&&json.uptime_days!==undefined&&!isNaN(Number(json.uptime_days))?Number(json.uptime_days):undefined;
+  return {stats:out, meta:{period:json&&json.period, generated:json&&(json.generated_at||json.timestamp),
+                           started:json&&json.server_started, uptime:up}};
 }
 function matchStats(raw){
   const idx={}; Object.keys(T).forEach(n=>{ idx[n.toLowerCase()]=n; });
@@ -933,9 +943,20 @@ function applyHeat(){
   const g=HEAT_GRAD[HEAT];
   legend.querySelector('.lg-bar').style.background='linear-gradient(90deg,'+g[0]+','+g[1]+','+g[2]+')';
   legend.querySelector('.lg-title').textContent=
-    ({rows:'Rows',writes:'Write activity',size:'Size'})[HEAT]+(STATS_META.period?' - '+STATS_META.period:'')+' (log scale)';
+    metricLabel(HEAT)+' (log scale)';
   legend.querySelector('.lg-min').textContent=fmtNum(lo,HEAT);
   legend.querySelector('.lg-max').textContent=fmtNum(hi,HEAT);
+}
+// rows and size are what the table holds right now; writes are counted since the service
+// started, or over the period of a snapshot diff - so only writes carry that label
+function serverAge(){ const M=STATS_META; if(!M.started) return '';
+  const d=String(M.started).replace('T',' ').slice(0,16);
+  return 'server up since '+d+(M.uptime!==undefined?' ('+M.uptime+' days)':''); }
+function metricLabel(m){
+  if(m==='rows') return 'Rows - current';
+  if(m==='size') return 'Size, data + indexes - current';
+  if(STATS_META.started) return 'Writes - '+serverAge();
+  return 'Writes'+(STATS_META.period?' - '+STATS_META.period:'');
 }
 function topMetric(){ return HEAT!=='off'?HEAT
   :(['rows','writes','size'].find(m=>Object.values(STATS).some(v=>v[m]!==undefined))||null); }
@@ -948,8 +969,8 @@ function renderTop(){
   const max=rows[0].v||1;
   const E=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   sTitle.textContent='Top tables';
-  sMeta.textContent=({rows:'by rows',writes:'by write activity',size:'by size'})[m]
-    +(STATS_META.period?' - '+STATS_META.period:'')+' - click one to see its links';
+  sMeta.textContent='by '+metricLabel(m)+' - biggest first, click one to see its links'
+    +(m!=='writes'&&STATS_META.started?' · '+serverAge():'');
   sList.innerHTML=rows.map((r,i)=>{ const f=logf(r.v,0,max), w=Math.max(3,Math.round(f*100));
     return '<a data-top="'+E(r.t||'')+'" title="'+E(r.n)+'"'+(r.t?'':' style="opacity:.55"')+'>'
       +'<span style="color:#666;display:inline-block;width:20px">'+(i+1)+'</span>'
