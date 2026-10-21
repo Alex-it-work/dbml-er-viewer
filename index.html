@@ -564,6 +564,7 @@ function expandCard(n){
 }
 
 function enterFocus(name,opts){
+  if(BIG && !(opts&&opts.cluster)){ openInBig(name); return; }
   if(!T[name]) return;
   opts=opts||{};
   if(FOCUS!==name) EXPANDED=new Set();          // a new centre starts folded
@@ -635,6 +636,7 @@ function enterFocus(name,opts){
   if(!opts.keepView){ const b=visibleBox(); fitBox(b[0],b[1],b[2],b[3]); }
 }
 function exitFocus(){
+  if(BIG){ if(FOCUS) enterBigMode(); return; }       // large schema: back to the list
   if(!FOCUS||!SAVED) return;
   const s=SAVED; FOCUS=null; SAVED=null; EXPANDED=new Set();
   Array.from(COLLAPSED).forEach(expandCard);
@@ -651,6 +653,7 @@ function exitFocus(){
 const sTitle=document.getElementById('s-title'),sMeta=document.getElementById('s-meta'),sList=document.getElementById('s-list');
 function resetPanel(){
   if(typeof renderTop==='function' && renderTop()) return;      // stats loaded -> ranking
+  if(BIG){ renderHubs(); return; }
   if(MODEL){ sTitle.textContent=MODEL.order.length+' tables'; sMeta.textContent=MODEL.E.length+' relationships · '+MODEL.crossings+' crossings · click a table'; }
   else { sTitle.textContent='No schema loaded'; sMeta.textContent='Open or drop a .dbml file, or load the sample.'; }
   sList.innerHTML='';
@@ -767,8 +770,8 @@ document.getElementById('focusbtn').onclick=()=>{ if(lock) enterFocus(lock); els
 document.getElementById('backbtn').onclick=exitFocus;
 window.addEventListener('keydown',e=>{ if(e.key==='Escape'&&FOCUS){ e.preventDefault(); exitFocus(); } });
 document.getElementById('find').addEventListener('input',e=>{ const q=e.target.value.trim().toLowerCase(); if(!q||!MODEL)return;
-  const hit=MODEL.order.find(n=>n.toLowerCase().includes(q));
-  if(hit){ if(FOCUS) enterFocus(hit); else { lock=hit; highlight(hit); focusTable(hit); } } });
+  const hit=(SCHEMA.order.length?SCHEMA.order:MODEL.order).find(n=>n.toLowerCase().includes(q));
+  if(hit){ if(FOCUS||BIG) enterFocus(hit); else { lock=hit; highlight(hit); focusTable(hit); } } });
 window.addEventListener('resize',()=>{ /* keep current transform; user can hit Fit */ });
 
 // ---------- export (clean static SVG with a proper viewBox, no view transform) ----------
@@ -830,7 +833,8 @@ function normStats(json){
 }
 // stats come keyed by DB names; schema uses DBML names - match loosely and report
 function matchStats(raw){
-  const idx={}; Object.keys(T).forEach(n=>{ idx[n.toLowerCase()]=n; });
+  const NAMES=SCHEMA.order.length?SCHEMA.order:Object.keys(T), known=new Set(NAMES);
+  const idx={}; NAMES.forEach(n=>{ idx[n.toLowerCase()]=n; });
   const bare=k=>String(k).replace(/["`]/g,'').replace(/^.*\./,'').toLowerCase();
   // Dynamics AX keeps SQL table names to 30 characters: a longer name is cut and
   // the table id appended (RMZ_CalculationMaterialCosts_ZTR -> RMZ_CALCULATIONMATERIALCO50619).
@@ -838,10 +842,10 @@ function matchStats(raw){
   const axTrunc=k=>{ const m=String(k).replace(/["`]/g,'').replace(/^.*\./,'').match(/^(.+?)(\d+)$/);
     if(!m||(m[1].length+m[2].length)!==30) return null;
     const pre=m[1].toLowerCase();
-    const c=Object.keys(T).filter(n=>n.length>30&&n.toLowerCase().indexOf(pre)===0);
+    const c=NAMES.filter(n=>n.length>30&&n.toLowerCase().indexOf(pre)===0);
     return c.length===1?c[0]:null; };
   const matched={}, unknown=[], map={};
-  Object.keys(raw).forEach(k=>{ const hit=T[k]?k:(idx[String(k).toLowerCase()]||idx[bare(k)]||axTrunc(k));
+  Object.keys(raw).forEach(k=>{ const hit=known.has(k)?k:(idx[String(k).toLowerCase()]||idx[bare(k)]||axTrunc(k));
     map[k]=hit||null;
     if(hit) matched[hit]=raw[k]; else unknown.push(k); });
   return {matched,unknown,map};
@@ -850,7 +854,7 @@ function loadStats(json,label){
   const {stats,meta}=normStats(json); const r=matchStats(stats);
   const matched=r.matched, unknown=r.unknown;
   STATS=matched; STATS_ALL=stats; STATS_MAP=r.map; STATS_META=meta;
-  const withData=Object.keys(matched).length, total=Object.keys(T).length;
+  const withData=Object.keys(matched).length, total=(SCHEMA.order.length||Object.keys(T).length);
   if(HEAT==='off'){ const pick=['rows','writes','size'].find(m=>Object.values(matched).some(v=>v[m]!==undefined));
     if(pick){ HEAT=pick; document.getElementById('heat').value=pick; } }
   applyHeat();
@@ -865,7 +869,7 @@ function applyHeat(){
   const names=Object.keys(T);
   const off = HEAT==='off' || !Object.keys(STATS).length;
   let lo=Infinity, hi=-Infinity;
-  if(!off) names.forEach(n=>{ const v=STATS[n]&&STATS[n][HEAT];
+  if(!off) Object.keys(STATS).forEach(n=>{ const v=STATS[n][HEAT];
     if(v!==undefined&&!isNaN(v)){ lo=Math.min(lo,v); hi=Math.max(hi,v); } });
   if(!isFinite(lo)){ lo=0; hi=0; }
   names.forEach(n=>{
@@ -896,7 +900,7 @@ function topMetric(){ return HEAT!=='off' ? HEAT
 function renderTop(){
   const m=topMetric(); if(!m||!Object.keys(STATS).length) return false;
   const src=Object.keys(STATS_ALL).length?STATS_ALL:STATS;
-  const rows=Object.keys(src).map(n=>({n:n,v:src[n][m],t:STATS_MAP[n]||(T[n]?n:null)}))
+  const rows=Object.keys(src).map(n=>({n:n,v:src[n][m],t:STATS_MAP[n]||((n in SCHEMA.tables)||T[n]?n:null)}))
         .filter(r=>r.v!==undefined&&!isNaN(r.v)).sort((a,b)=>b.v-a.v).slice(0,30);
   if(!rows.length) return false;
   const max=rows[0].v||1;
@@ -905,15 +909,17 @@ function renderTop(){
     +(STATS_META.period?' \u00b7 '+STATS_META.period:'')+' \u2014 click one to see its links';
   sList.innerHTML=rows.map((r,i)=>{
     const f=logf(r.v,0,max), w=Math.max(3,Math.round(f*100));
+    // value floats right first, the name is cut with an ellipsis - long AX names stay on one line
     return '<a data-top="'+esc(r.t||'')+'" title="'+esc(r.n)+'"'+(r.t?'':' style="opacity:.55"')+'>'
+      +'<small style="float:right;margin-left:6px">'+fmtNum(r.v,m)+'</small>'
+      +'<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'
       +'<span style="color:#666;display:inline-block;width:20px">'+(i+1)+'</span>'
-      +esc(r.t||r.n)+(r.t?'':' <small style="color:#777">no links</small>')
-      +'<small style="float:right">'+fmtNum(r.v,m)+'</small>'
+      +esc(r.t||r.n)+(r.t?'':' <small style="color:#777">no links</small>')+'</div>'
       +'<div style="height:3px;border-radius:2px;margin-top:4px;background:'+heatColor(f,m)+';width:'+w+'%"></div></a>';
   }).join('');
   sList.querySelectorAll('a[data-top]').forEach(a=>a.addEventListener('click',ev=>{ ev.stopPropagation();
     const n=a.getAttribute('data-top');
-    if(n&&T[n]) enterFocus(n);
+    if(n&&((n in SCHEMA.tables)||T[n])) enterFocus(n);
     else flash('no relations known for '+a.getAttribute('title')+' - merge the .dbml that describes it'); }));
   return true;
 }
@@ -951,10 +957,71 @@ function mergeInto(parsed, merge){
 
 // Build the layout from SCHEMA. Tables already on screen keep their spot
 // (unless opts.relayout), so a merge only places the newcomers.
+// ================= LARGE SCHEMA =================
+// The force layout is roughly quadratic (measured: 800 tables ~25 s per attempt),
+// so above BIG_LIMIT nothing is laid out globally. You pick a table - from the
+// ranking, the most-connected list or search - and only that table and its
+// direct links are drawn, which is instant at any schema size.
+const BIG_LIMIT=300;
+let BIG=false, BIG_DEG={};
+function liveRefs(){ const t=SCHEMA.tables; return SCHEMA.refs.filter(r=>(r[0] in t)&&(r[2] in t)); }
+function edgesFor(order,tables,refs){
+  const W={},H={},ci={};
+  order.forEach(n=>{ W[n]=W_TABLE; H[n]=tableHeight(tables[n].length);
+    const m={}; tables[n].forEach((c,i)=>{ m[c.col]=i; }); ci[n]=m; });
+  const E=[];
+  refs.forEach(r=>{ const f=r[0],fc=r[1],t=r[2],tc=r[3];
+    if(f===t||!(f in ci)||!(t in ci)) return;
+    const fi=ci[f][fc], ti=ci[t][tc];
+    E.push({f:f,t:t,foff:fi!==undefined?colOffset(fi):H[f]/2,toff:ti!==undefined?colOffset(ti):H[t]/2,
+            fc:r[4],tc:r[5],fcol:fc,tcol:tc}); });
+  return {W:W,H:H,E:E};
+}
+function enterBigMode(){
+  BIG=true; FOCUS=null; SAVED=null; EXPANDED=new Set(); COLLAPSED.clear(); lock=null;
+  const refs=liveRefs();
+  BIG_DEG={}; refs.forEach(r=>{ if(r[0]!==r[2]){ BIG_DEG[r[0]]=(BIG_DEG[r[0]]||0)+1; BIG_DEG[r[2]]=(BIG_DEG[r[2]]||0)+1; } });
+  MODEL={order:SCHEMA.order,tables:SCHEMA.tables,E:refs,x:{},y:{},W:{},H:{},cw:100,ch:100,crossings:0,refsRaw:refs};
+  T={}; ADJ={}; RELS=[]; relsLayer.textContent=''; tablesLayer.textContent='';
+  setFocusUI(false);
+  // the canvas stays empty on purpose - say so instead of looking broken
+  const drop=document.getElementById('drop');
+  drop.querySelector('.box').innerHTML='<b>Large schema: '+SCHEMA.order.length+' tables</b><br>'
+    +'Nothing is drawn until you pick a table - use the list on the right or search.<br>'
+    +'You will see that table with all of its direct links.';
+  drop.style.display='flex';
+  resetPanel(); applyHeat();
+  flash('large schema: '+SCHEMA.order.length+' tables - pick one from the list or search for it');
+}
+function openInBig(name){
+  if(!(name in SCHEMA.tables)) return;
+  const refs=liveRefs(), touch=refs.filter(r=>r[0]===name||r[2]===name);
+  const names=[name], seen=new Set([name]);
+  touch.forEach(r=>{ const o=(r[0]===name)?r[2]:r[0]; if(!seen.has(o)){ seen.add(o); names.push(o); } });
+  const sub={}; names.forEach(n=>{ sub[n]=SCHEMA.tables[n]; });
+  const g=edgesFor(names,sub,touch), x={}, y={};
+  names.forEach(n=>{ x[n]=0; y[n]=0; });          // enterFocus does the real placement
+  FOCUS=null; SAVED=null; EXPANDED=new Set(); COLLAPSED.clear();
+  render({order:names,tables:sub,E:g.E,x:x,y:y,W:g.W,H:g.H,cw:W_TABLE,ch:g.H[name],crossings:0,refsRaw:refs}, true);
+  enterFocus(name,{cluster:true});
+}
+function renderHubs(){
+  const rows=Object.keys(BIG_DEG).map(n=>({n:n,v:BIG_DEG[n]})).sort((a,b)=>b.v-a.v).slice(0,30);
+  sTitle.textContent=SCHEMA.order.length+' tables';
+  sMeta.textContent=liveRefs().length+' relationships - large schema, nothing is drawn until you pick a table. Most connected:';
+  sList.innerHTML=rows.map((r,i)=>'<a data-hub="'+esc(r.n)+'" title="'+esc(r.n)+'">'
+    +'<small style="float:right;margin-left:6px">'+r.v+' links</small>'
+    +'<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'
+    +'<span style="color:#666;display:inline-block;width:20px">'+(i+1)+'</span>'+esc(r.n)+'</div></a>').join('');
+  sList.querySelectorAll('a[data-hub]').forEach(a=>a.addEventListener('click',ev=>{ ev.stopPropagation(); enterFocus(a.getAttribute('data-hub')); }));
+}
+
 function buildAndRender(opts){
   opts=opts||{};
   // leaving focus first: the real positions live in SAVED while focused
   if(FOCUS&&SAVED){ POS=SAVED.pos; FOCUS=null; SAVED=null; setFocusUI(false); }
+  if(SCHEMA.order.length>BIG_LIMIT){ enterBigMode(); return; }
+  BIG=false;
   const tables=SCHEMA.tables;
   const refs=SCHEMA.refs.filter(r=>(r[0] in tables)&&(r[2] in tables));
   const seeds = SCHEMA.order.length>120 ? 4 : (SCHEMA.order.length>60 ? 8 : 14);

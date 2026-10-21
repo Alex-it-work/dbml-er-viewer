@@ -1004,6 +1004,8 @@ def main():
     ap.add_argument("--no-svg", action="store_true", help="skip the static .svg output")
     ap.add_argument("--no-html", action="store_true", help="skip the interactive .html output")
     ap.add_argument("-q", "--quiet", action="store_true")
+    ap.add_argument("--force", action="store_true",
+                    help="lay out even a very large schema (slow: the layout is roughly quadratic)")
     args = ap.parse_args()
 
     order, tables, refs = merge_files(args.dbml, quiet=args.quiet)
@@ -1011,6 +1013,12 @@ def main():
         print(f"parsed {len(tables)} tables, {len(refs)} relationships")
     if not tables:
         print("no tables found - is this a DBML file?", file=sys.stderr); sys.exit(1)
+    if len(tables) > 300 and not args.force:
+        print(f"{len(tables)} tables: a full layout would take a very long time "
+              f"(it is roughly quadratic). Open the .dbml in index.html instead - it "
+              f"switches to large-schema mode (pick a table, see its links). "
+              f"Use --force to lay it out anyway.", file=sys.stderr)
+        sys.exit(2)
 
     L = layout(order, tables, refs, seeds=args.seeds, verbose=not args.quiet)
     if not args.quiet:
