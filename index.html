@@ -656,7 +656,7 @@ function resetPanel(){
   if(BIG){ renderHubs(); return; }
   if(MODEL){ sTitle.textContent=MODEL.order.length+' tables'; sMeta.textContent=MODEL.E.length+' relationships · '+MODEL.crossings+' crossings · click a table'; }
   else { sTitle.textContent='No schema loaded'; sMeta.textContent='Open or drop a .dbml file, or load the sample.'; }
-  sList.innerHTML='';
+  sList.innerHTML=''; sList.dataset.key='';
 }
 function panel(name){
   const out=[],inc=[];
@@ -668,7 +668,7 @@ function panel(name){
       h+=`<a data-go="${esc(o.g)}">${esc(o.g)} <small>${o.card}</small><br><small>${esc(o.via)}</small></a>`;});};
   block('References (N→1)', out, r=>({g:r.t,card:`${r.fc}→${r.tc}`,via:`${r.fcol} → ${r.t}.${r.tcol}`}));
   block('Referenced by (1→N)', inc, r=>({g:r.f,card:`${r.fc}→${r.tc}`,via:`${r.f}.${r.fcol} → ${r.tcol}`}));
-  sList.innerHTML=h;
+  sList.innerHTML=h; sList.dataset.key='';
   sList.querySelectorAll('a[data-go]').forEach(a=>a.addEventListener('click',ev=>{ ev.stopPropagation();
     const g=a.getAttribute('data-go');
     if(FOCUS) enterFocus(g);                       // hop to that table's own view
@@ -789,7 +789,7 @@ document.getElementById('save').onclick=()=>{ if(!MODEL)return; lock=null; clear
 // ================= STATS / HEATMAP (offline: a stats.json, no server) =================
 // Contract: {"period":"...", "tables":{ "orders":{"rows":N,"writes":N,"size":N}, ... }}
 // Key aliases are accepted, so output straight from a SQL query usually just works.
-let STATS={}, STATS_ALL={}, STATS_MAP={}, STATS_META={}, HEAT='off';
+let STATS={}, STATS_ALL={}, STATS_MAP={}, STATS_META={}, HEAT='off', STATS_VER=0, LIST_CACHE={key:''};
 const HEAT_GRAD={ rows:['#2b5c8f','#4a3b89','#9c27b0'],
                   size:['#20505f','#2e7d6b','#7cb342'],
                   writes:['#27ae60','#f39c12','#e74c3c'] };
@@ -853,7 +853,7 @@ function matchStats(raw){
 function loadStats(json,label){
   const {stats,meta}=normStats(json); const r=matchStats(stats);
   const matched=r.matched, unknown=r.unknown;
-  STATS=matched; STATS_ALL=stats; STATS_MAP=r.map; STATS_META=meta;
+  STATS=matched; STATS_ALL=stats; STATS_MAP=r.map; STATS_META=meta; STATS_VER++;
   const withData=Object.keys(matched).length, total=(SCHEMA.order.length||Object.keys(T).length);
   if(HEAT==='off'){ const pick=['rows','writes','size'].find(m=>Object.values(matched).some(v=>v[m]!==undefined));
     if(pick){ HEAT=pick; document.getElementById('heat').value=pick; } }
@@ -899,28 +899,28 @@ function topMetric(){ return HEAT!=='off' ? HEAT
   : (['rows','writes','size'].find(m=>Object.values(STATS).some(v=>v[m]!==undefined))||null); }
 function renderTop(){
   const m=topMetric(); if(!m||!Object.keys(STATS).length) return false;
-  const src=Object.keys(STATS_ALL).length?STATS_ALL:STATS;
-  const rows=Object.keys(src).map(n=>({n:n,v:src[n][m],t:STATS_MAP[n]||((n in SCHEMA.tables)||T[n]?n:null)}))
-        .filter(r=>r.v!==undefined&&!isNaN(r.v)).sort((a,b)=>b.v-a.v).slice(0,30);
-  if(!rows.length) return false;
-  const max=rows[0].v||1;
-  sTitle.textContent='Top tables';
+  const key='top|'+m+'|'+STATS_VER+'|'+SCHEMA.order.length;
+  if(LIST_CACHE.key!==key){               // build once per metric/stats - hovering just re-shows it
+    const src=Object.keys(STATS_ALL).length?STATS_ALL:STATS;
+    const rows=Object.keys(src).map(n=>({n:n,v:src[n][m],t:STATS_MAP[n]||((n in SCHEMA.tables)||T[n]?n:null)}))
+          .filter(r=>r.v!==undefined&&!isNaN(r.v)).sort((a,b)=>b.v-a.v);
+    const max=(rows[0]&&rows[0].v)||1;
+    LIST_CACHE={key:key, count:rows.length, html:rows.map((r,i)=>{
+      const f=logf(r.v,0,max), w=Math.max(3,Math.round(f*100));
+      // value floats right first, the name is cut with an ellipsis - long AX names stay on one line
+      return '<a data-top="'+esc(r.t||'')+'" title="'+esc(r.n)+'"'+(r.t?'':' style="opacity:.55"')+'>'
+        +'<small style="float:right;margin-left:6px">'+fmtNum(r.v,m)+'</small>'
+        +'<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'
+        +'<span style="color:#666;display:inline-block;width:36px">'+(i+1)+'</span>'
+        +esc(r.t||r.n)+(r.t?'':' <small style="color:#777">no links</small>')+'</div>'
+        +'<div style="height:3px;border-radius:2px;margin-top:4px;background:'+heatColor(f,m)+';width:'+w+'%"></div></a>';
+    }).join('')};
+  }
+  if(!LIST_CACHE.count) return false;
+  sTitle.textContent='All tables by load ('+LIST_CACHE.count+')';
   sMeta.textContent=({rows:'by rows',writes:'by write activity',size:'by size'})[m]
-    +(STATS_META.period?' \u00b7 '+STATS_META.period:'')+' \u2014 click one to see its links';
-  sList.innerHTML=rows.map((r,i)=>{
-    const f=logf(r.v,0,max), w=Math.max(3,Math.round(f*100));
-    // value floats right first, the name is cut with an ellipsis - long AX names stay on one line
-    return '<a data-top="'+esc(r.t||'')+'" title="'+esc(r.n)+'"'+(r.t?'':' style="opacity:.55"')+'>'
-      +'<small style="float:right;margin-left:6px">'+fmtNum(r.v,m)+'</small>'
-      +'<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'
-      +'<span style="color:#666;display:inline-block;width:20px">'+(i+1)+'</span>'
-      +esc(r.t||r.n)+(r.t?'':' <small style="color:#777">no links</small>')+'</div>'
-      +'<div style="height:3px;border-radius:2px;margin-top:4px;background:'+heatColor(f,m)+';width:'+w+'%"></div></a>';
-  }).join('');
-  sList.querySelectorAll('a[data-top]').forEach(a=>a.addEventListener('click',ev=>{ ev.stopPropagation();
-    const n=a.getAttribute('data-top');
-    if(n&&((n in SCHEMA.tables)||T[n])) enterFocus(n);
-    else flash('no relations known for '+a.getAttribute('title')+' - merge the .dbml that describes it'); }));
+    +(STATS_META.period?' \u00b7 '+STATS_META.period:'')+' \u2014 busiest first, click one to see its links';
+  if(sList.dataset.key!==key){ sList.innerHTML=LIST_CACHE.html; sList.dataset.key=key; }
   return true;
 }
 document.getElementById('heat').addEventListener('change',e=>{ HEAT=e.target.value; applyHeat(); if(!lock) resetPanel(); });
@@ -1006,15 +1006,27 @@ function openInBig(name){
   enterFocus(name,{cluster:true});
 }
 function renderHubs(){
-  const rows=Object.keys(BIG_DEG).map(n=>({n:n,v:BIG_DEG[n]})).sort((a,b)=>b.v-a.v).slice(0,30);
+  const key='hubs|'+SCHEMA.order.length+'|'+Object.keys(BIG_DEG).length;
+  if(LIST_CACHE.key!==key){
+    const rows=Object.keys(BIG_DEG).map(n=>({n:n,v:BIG_DEG[n]})).sort((a,b)=>b.v-a.v);
+    LIST_CACHE={key:key, count:rows.length, html:rows.map((r,i)=>'<a data-hub="'+esc(r.n)+'" title="'+esc(r.n)+'">'
+      +'<small style="float:right;margin-left:6px">'+r.v+' links</small>'
+      +'<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'
+      +'<span style="color:#666;display:inline-block;width:36px">'+(i+1)+'</span>'+esc(r.n)+'</div></a>').join('')};
+  }
   sTitle.textContent=SCHEMA.order.length+' tables';
-  sMeta.textContent=liveRefs().length+' relationships - large schema, nothing is drawn until you pick a table. Most connected:';
-  sList.innerHTML=rows.map((r,i)=>'<a data-hub="'+esc(r.n)+'" title="'+esc(r.n)+'">'
-    +'<small style="float:right;margin-left:6px">'+r.v+' links</small>'
-    +'<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'
-    +'<span style="color:#666;display:inline-block;width:20px">'+(i+1)+'</span>'+esc(r.n)+'</div></a>').join('');
-  sList.querySelectorAll('a[data-hub]').forEach(a=>a.addEventListener('click',ev=>{ ev.stopPropagation(); enterFocus(a.getAttribute('data-hub')); }));
+  sMeta.textContent=liveRefs().length+' relationships - large schema, nothing is drawn until you pick a table. All '
+    +LIST_CACHE.count+' linked tables, most connected first:';
+  if(sList.dataset.key!==key){ sList.innerHTML=LIST_CACHE.html; sList.dataset.key=key; }
 }
+// one click handler for both lists instead of thousands of per-row listeners
+sList.addEventListener('click',ev=>{
+  const a=ev.target.closest&&ev.target.closest('a[data-top],a[data-hub]'); if(!a) return;
+  ev.stopPropagation();
+  const n=a.hasAttribute('data-top')?a.getAttribute('data-top'):a.getAttribute('data-hub');
+  if(n&&((n in SCHEMA.tables)||T[n])) enterFocus(n);
+  else flash('no relations known for '+a.getAttribute('title')+' - merge the .dbml that describes it');
+});
 
 function buildAndRender(opts){
   opts=opts||{};
