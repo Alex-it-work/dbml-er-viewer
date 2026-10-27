@@ -80,6 +80,74 @@ python dbml_to_er.py examples/sample.dbml --seeds 16
 
 Both paths share the same DBML parser and force-directed layout — the Python script and `index.html` are direct ports of each other.
 
+## Straight from a database: `er_collect.py`
+
+No DBML at hand? Read the schema, the foreign keys and the load numbers right
+out of the database into one `.er.json`, then open it in `index.html` (or pass
+it to `dbml_to_er.py`):
+
+```bash
+python er_collect.py sqlserver -S SERVER -d BASE                # Windows login
+python er_collect.py postgres  -S host:5432 -d shop -U me
+python er_collect.py mysql     -S host:3306 -d shop -U me       # MariaDB too
+python er_collect.py oracle    -S host:1521/SERVICE -U me --schema OWNER
+python er_collect.py sqlite    shop.db
+python er_collect.py odbc      --dsn "DSN=Legacy;UID=me" --count  # anything with an ODBC driver
+```
+
+| engine | driver (`pip install ...`) | load numbers |
+|---|---|---|
+| SQL Server 2005+ | `pyodbc` + Microsoft ODBC Driver | rows, size, writes, reads since service start |
+| PostgreSQL 10+ | `psycopg[binary]` | rows, size, writes, reads since start / stats reset |
+| MySQL 5.6+ / MariaDB | `pymysql` | rows, size, writes, reads since start (performance_schema) |
+| Oracle 10g+ | `oracledb` (thin, no client) | rows, size, writes/reads since instance start, or since last stats gathering |
+| SQLite | built in | rows, size |
+| any ODBC source | `pyodbc` | rows with `--count` |
+
+Only the driver for the engine you use is needed. Passwords never go on the
+command line: set `ER_PASSWORD` or type it when asked. Whatever the login may
+not see (`VIEW SERVER STATE`, `DBA_SEGMENTS`, `V$` views...) is skipped with a
+warning - the schema and relationships are still written.
+
+### The `.er.json` format
+
+One file carries the schema, the relationships and the load - or any part of
+it; several files dropped together are merged, the later one wins.
+
+```json
+{
+  "format": "er/1",
+  "source": { "engine": "sqlserver", "database": "shop", "version": "SQL Server 16.0" },
+  "server_started": "2026-09-12T08:30:00", "uptime_days": 45.0,
+  "counters_since": "2026-09-12T08:30:00", "counters_days": 45.0,
+  "tables": {
+    "orders": { "columns": [ { "name": "id", "type": "int", "pk": true },
+                             { "name": "user_id", "type": "int" } ],
+                "stats": { "rows": 1450000, "size": 820, "writes": 12034567, "reads": 991000 } }
+  },
+  "relations": [
+    { "from": "orders", "to": "users", "on": [["user_id", "id"]],
+      "kind": "fk", "card": "N:1", "name": "fk_orders_user" }
+  ]
+}
+```
+
+What DBML cannot say and `.er.json` can:
+
+- `kind` - where the relationship comes from: `fk` (declared in the database),
+  or anything an outside tool knows about: `edt` / `table` from Dynamics AX
+  metadata, `manual`, `inferred`;
+- `on` - every column pair of a composite key;
+- `where` - fixed-value conditions, e.g. `{ "from.TransType": 2 }`;
+- `stats` next to the table, with the moment counting started.
+
+This is how relationships that live outside the database get in: an ERP such as
+Dynamics AX keeps them in its own metadata, so its export writes `.er.json`
+relations, `er_collect.py` reads the tables and the load from SQL Server, and
+the two files are merged in the viewer. Table names are matched ignoring case
+(`INVENTTRANS` = `InventTrans`), and AX's 30-character SQL names (a longer
+name is cut and the table id appended) find their table.
+
 ## Where stats.json comes from
 
 Nothing to install: the database can build the JSON itself. Run the query for
@@ -96,7 +164,7 @@ On SQL Server the result shows up as a link in the SSMS grid — click it to get
 the full text. To write the file directly instead:
 
 ```text
-sqlcmd -S SERVER -d BASE -E -i sql\sqlserver_now.sql -o stats.json -y 0 -h -1
+sqlcmd -S SERVER -d BASE -E -i sql\sqlserver_now.sql -o stats.json -h -1 -W -r1
 ```
 
 Both the object form (`"tables": { "orders": {...} }`) and the list form that

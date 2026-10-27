@@ -186,12 +186,77 @@ def parse_dbml(text):
     return order, tables, refs
 
 
+def parse_er(obj):
+    """.er.json (er_collect.py, the AX export) -> order, tables, refs, extras, stats.
+    extras[(f, fcol, t, tcol)] keeps what DBML has no room for: kind, every column
+    pair of a composite key, fixed-value conditions."""
+    order, tables, refs, extras, st = [], {}, [], {}, {}
+    for n, d in (obj.get("tables") or {}).items():
+        d = d or {}
+        order.append(n)
+        cols = []
+        for c in d.get("columns") or []:
+            if isinstance(c, (list, tuple)):
+                cols.append((str(c[0]), str(c[1]) if len(c) > 1 else "", bool(c[2]) if len(c) > 2 else False))
+            else:
+                cols.append((str(c.get("name")), str(c.get("type") or ""), bool(c.get("pk"))))
+        tables[n] = cols
+        if d.get("stats"):
+            st[n] = d["stats"]
+    for r in obj.get("relations") or []:
+        on = r.get("on") or []
+        if not r.get("from") or not r.get("to") or not on:
+            continue
+        fc, _, tc = str(r.get("card") or "N:1").partition(":")
+        ref = (str(r["from"]), str(on[0][0]), str(r["to"]), str(on[0][1]), fc or "N", tc or "1")
+        refs.append(ref)
+        x = {k: r[k] for k in ("kind", "where") if r.get(k)}
+        if len(on) > 1:
+            x["on"] = on
+        if x:
+            extras[ref[:4]] = x
+    stats = None
+    if st:
+        stats = {k: v for k, v in obj.items() if k not in ("tables", "relations")}
+        stats["tables"] = st
+    return order, tables, refs, extras, stats
+
+def name_resolver(names):
+    """Same table under another spelling: INVENTTRANS (SQL Server) is InventTrans (AX);
+    AX cuts SQL names to 30 characters and appends the table id, so such a name is
+    matched by prefix (only when exactly one table fits)."""
+    low = {n.lower(): n for n in names}
+    def resolve(k):
+        if k in names:
+            return k
+        if k.lower() in low:
+            return low[k.lower()]
+        m = re.match(r"^(.+?)(\d+)$", k)
+        if m and len(k) == 30:
+            c = [n for n in names if len(n) > 30 and n.lower().startswith(m.group(1).lower())]
+            if len(c) == 1:
+                return c[0]
+        return None
+    return resolve
+
 def merge_files(paths, quiet=False):
-    """Parse several .dbml files into one schema. Later files win: a table
-    redefined later replaces the earlier definition; refs are de-duplicated."""
-    order, tables, refs, seen = [], {}, [], set()
+    """Parse several .dbml / .er.json files into one schema. Later files win: a
+    table redefined later replaces the earlier definition; refs are de-duplicated."""
+    order, tables, refs, seen, extras, stats = [], {}, [], set(), {}, None
     for path in paths:
-        o, t, r = parse_dbml(read_text(path))
+        text = read_text(path).lstrip("﻿")
+        if text.lstrip().startswith("{"):
+            o, t, r, x, s = parse_er(json.loads(text))
+            stats = s or stats
+        else:
+            (o, t, r), x = parse_dbml(text), {}
+        if order:                                # keep the name already in the schema
+            resolve = name_resolver(set(order))
+            R = lambda n: resolve(n) or n
+            o = [R(n) for n in o]
+            t = {R(n): v for n, v in t.items()}
+            r = [(R(a), ac, R(b), bc, fc, tc) for a, ac, b, bc, fc, tc in r]
+            x = {(R(k[0]), k[1], R(k[2]), k[3]): v for k, v in x.items()}
         added = updated = 0
         for n in o:
             if n in tables:
@@ -204,10 +269,20 @@ def merge_files(paths, quiet=False):
             key = ref[:4]
             if key not in seen:
                 seen.add(key); refs.append(ref); new_refs += 1
+        extras.update(x)
         if not quiet:
             print(f"  {os.path.basename(path)}: +{added} new, {updated} updated, +{new_refs} refs")
     refs = [r for r in refs if r[0] in tables and r[2] in tables]
-    return order, tables, refs
+    # a link names ItemId, the table has ITEMID (columns came from the database):
+    # point the link at the column that exists so it anchors on the right row
+    lc = {n: {c[0].lower(): c[0] for c in cols} for n, cols in tables.items()}
+    fixed = []
+    for a, ac, b, bc, fc, tc in refs:
+        a2, b2 = lc[a].get(ac.lower(), ac), lc[b].get(bc.lower(), bc)
+        if (a2, b2) != (ac, bc) and (a, ac, b, bc) in extras:
+            extras[(a, a2, b, b2)] = extras.pop((a, ac, b, bc))
+        fixed.append((a, a2, b, b2, fc, tc))
+    return order, tables, fixed, extras, stats
 
 # ----------------------------------------------------------------------------
 # layout (force-directed, multi-seed, pick fewest crossings)
@@ -535,7 +610,7 @@ HTML_TPL = r'''<!DOCTYPE html>
   </label>
   <span style="width:1px;height:22px;background:var(--line);margin:0 2px;"></span>
   <label title="Colour tables by a metric from stats.json">Heat
-    <select id="heat"><option value="off" selected>off</option><option value="rows">rows</option><option value="writes">writes</option><option value="size">size</option></select>
+    <select id="heat"><option value="off" selected>off</option><option value="rows">rows</option><option value="writes">writes</option><option value="reads">reads</option><option value="size">size</option></select>
   </label>
   <button id="statsbtn" title="Load stats.json (or drop it on the page)">Stats&#8230;</button>
   <input id="statsfile" type="file" accept=".json,application/json" style="display:none">
@@ -759,17 +834,23 @@ function panel(name){
   let h=''; const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
   const st=STATS[name];
   if(st){   // all three numbers for the selected table, plus writes per day when the uptime is known
-    const perDay=(st.writes!==undefined&&STATS_META.uptime>0)?' ≈ '+fmtNum(st.writes/STATS_META.uptime,'writes')+'/day':'';
+    const D=counterDays(), perDay=v=>(v!==undefined&&D>0)?' ≈ '+fmtNum(v/D,'writes')+'/day':'';
     h+='<div class="grp">Load</div><div style="font-size:12px;line-height:1.6;color:#ccc;padding:0 7px">'
       +'rows <b>'+fmtNum(st.rows,'rows')+'</b> · size <b>'+fmtNum(st.size,'size')+'</b><br>'
-      +'writes <b>'+fmtNum(st.writes,'writes')+'</b>'+perDay
-      +(STATS_META.started?'<br><small style="color:#888">'+esc(serverAge())+'</small>':'')+'</div>';
+      +'writes <b>'+fmtNum(st.writes,'writes')+'</b>'+perDay(st.writes)
+      +(st.reads!==undefined?'<br>reads <b>'+fmtNum(st.reads,'reads')+'</b>'+perDay(st.reads):'')
+      +(countedSince()?'<br><small style="color:#888">'+esc(countedSince())+'</small>':'')+'</div>';
   }
   const block=(title,arr,fn)=>{ if(!arr.length)return; h+=`<div class="grp">${title}</div>`;
     arr.slice().sort((a,b)=>fn(a).g.localeCompare(fn(b).g)).forEach(r=>{const o=fn(r);
-      h+=`<a data-go="${esc(o.g)}">${esc(o.g)} <small>${o.card}</small><br><small>${esc(o.via)}</small></a>`;});};
-  block('References (N→1)', out, r=>({g:r.t,card:`${r.fc}→${r.tc}`,via:`${r.fcol} → ${r.t}.${r.tcol}`}));
-  block('Referenced by (1→N)', inc, r=>({g:r.f,card:`${r.fc}→${r.tc}`,via:`${r.f}.${r.fcol} → ${r.tcol}`}));
+      h+=`<a data-go="${esc(o.g)}">${esc(o.g)} <small>${o.card}</small>${o.kind}<br><small>${esc(o.via)}</small>${o.where}</a>`;});};
+  // composite keys list every column pair; a link that is not a real FK says where it came from
+  const pairs=(r,pf,pt)=>(r.on&&r.on.length>1?r.on:[[r.fcol,r.tcol]]).map(p=>pf+p[0]+' → '+pt+p[1]).join(', ');
+  const kind=r=>r.kind&&r.kind!=='fk'?` <small style="color:#e0a040">${esc(r.kind)}</small>`:'';
+  const where=r=>r.where&&Object.keys(r.where).length?'<br><small style="color:#999">where '
+    +esc(Object.keys(r.where).map(k=>k+' = '+r.where[k]).join(' and '))+'</small>':'';
+  block('References (N→1)', out, r=>({g:r.t,card:`${r.fc}→${r.tc}`,via:pairs(r,'',r.t+'.'),kind:kind(r),where:where(r)}));
+  block('Referenced by (1→N)', inc, r=>({g:r.f,card:`${r.fc}→${r.tc}`,via:pairs(r,r.f+'.',''),kind:kind(r),where:where(r)}));
   sList.innerHTML=h;
   sList.querySelectorAll('a[data-go]').forEach(a=>a.addEventListener('click',ev=>{ev.stopPropagation(); const g=a.getAttribute('data-go');
     if(FOCUS) enterFocus(g); else { lock=g; highlight(g); focusTable(g); }}));
@@ -851,7 +932,9 @@ document.getElementById('save').onclick=()=>{lock=null;clear();
 let STATS={}, STATS_ALL={}, STATS_MAP={}, STATS_META={}, HEAT='off';
 const W_CARD=240;
 const HEAT_GRAD={ rows:['#2b5c8f','#4a3b89','#9c27b0'], size:['#20505f','#2e7d6b','#7cb342'],
-                  writes:['#27ae60','#f39c12','#e74c3c'] };
+                  writes:['#27ae60','#f39c12','#e74c3c'],
+                  reads:['#1f4e79','#2980b9','#26c6da'] };
+const METRICS=['rows','writes','reads','size'];
 function lerpHex(a,b,f){ const pa=a.match(/[0-9a-f]{2}/gi).map(h=>parseInt(h,16)),
   pb=b.match(/[0-9a-f]{2}/gi).map(h=>parseInt(h,16));
   const c=[0,1,2].map(i=>Math.round(pa[i]+f*(pb[i]-pa[i]))); return 'rgb('+c[0]+','+c[1]+','+c[2]+')'; }
@@ -876,15 +959,19 @@ function normStats(json){
   const pick=(v,names)=>{ for(const n of names){ const x=v[n];
     if(x!==undefined&&x!==null&&x!==''&&!isNaN(Number(x))) return Number(x); } return undefined; };
   const out={};
-  for(const k in src){ const v=src[k];
+  for(const k in src){ let v=src[k];
     if(typeof v==='number'){ out[k]={rows:v}; continue; }
     if(!v||typeof v!=='object') continue;
+    if(v.stats&&typeof v.stats==='object') v=v.stats;        // .er.json: numbers sit under "stats"
+    else if(v.columns) continue;                               // .er.json table without load data
     out[k]={ rows:pick(v,['rows','rowCount','row_count','n_live_tup','live_rows','count']),
              writes:pick(v,['writes','writesPerSec','writes_per_sec','total_writes','write_ops','mutations']),
+             reads:pick(v,['reads','total_reads','read_ops']),
              size:pick(v,['size','size_mb','sizeMb','size_bytes','bytes','total_bytes','total_size_mb']) }; }
-  const up=json&&json.uptime_days!==undefined&&!isNaN(Number(json.uptime_days))?Number(json.uptime_days):undefined;
+  const n=x=>json&&json[x]!==undefined&&json[x]!==null&&!isNaN(Number(json[x]))?Number(json[x]):undefined;
   return {stats:out, meta:{period:json&&json.period, generated:json&&(json.generated_at||json.timestamp),
-                           started:json&&json.server_started, uptime:up}};
+                           started:json&&json.server_started, uptime:n('uptime_days'),
+                           since:json&&json.counters_since, sinceDays:n('counters_days')}};
 }
 function matchStats(raw){
   const idx={}; Object.keys(T).forEach(n=>{ idx[n.toLowerCase()]=n; });
@@ -908,7 +995,7 @@ function loadStats(json,label){
   const matched=r.matched, unknown=r.unknown;
   STATS=matched; STATS_ALL=stats; STATS_MAP=r.map; STATS_META=meta;
   const withData=Object.keys(matched).length, total=Object.keys(T).length;
-  if(HEAT==='off'){ const pick=['rows','writes','size'].find(m=>Object.values(matched).some(v=>v[m]!==undefined));
+  if(HEAT==='off'){ const pick=METRICS.find(m=>Object.values(matched).some(v=>v[m]!==undefined));
     if(pick){ HEAT=pick; document.getElementById('heat').value=pick; } }
   applyHeat();
   if(!lock) resetPanel();
@@ -952,14 +1039,21 @@ function applyHeat(){
 function serverAge(){ const M=STATS_META; if(!M.started) return '';
   const d=String(M.started).replace('T',' ').slice(0,16);
   return 'server up since '+d+(M.uptime!==undefined?' ('+M.uptime+' days)':''); }
+// counters can start later than the server (PostgreSQL pg_stat_reset) - then say so
+function countedSince(){ const M=STATS_META;
+  if(M.since&&String(M.since).slice(0,16)!==String(M.started||'').slice(0,16))
+    return 'counted since '+String(M.since).replace('T',' ').slice(0,16)+(M.sinceDays!==undefined?' ('+M.sinceDays+' days)':'');
+  return M.started?serverAge():''; }
+function counterDays(){ const M=STATS_META; return M.sinceDays!==undefined?M.sinceDays:M.uptime; }
 function metricLabel(m){
   if(m==='rows') return 'Rows - current';
   if(m==='size') return 'Size, data + indexes - current';
-  if(STATS_META.started) return 'Writes - '+serverAge();
-  return 'Writes'+(STATS_META.period?' - '+STATS_META.period:'');
+  const w=m==='reads'?'Reads':'Writes', c=countedSince();
+  if(c) return w+' - '+c;
+  return w+(STATS_META.period?' - '+STATS_META.period:'');
 }
 function topMetric(){ return HEAT!=='off'?HEAT
-  :(['rows','writes','size'].find(m=>Object.values(STATS).some(v=>v[m]!==undefined))||null); }
+  :(METRICS.find(m=>Object.values(STATS).some(v=>v[m]!==undefined))||null); }
 function renderTop(){
   const m=topMetric(); if(!m||!Object.keys(STATS).length) return false;
   const src=Object.keys(STATS_ALL).length?STATS_ALL:STATS;
@@ -970,7 +1064,7 @@ function renderTop(){
   const E=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   sTitle.textContent='Top tables';
   sMeta.textContent='by '+metricLabel(m)+' - biggest first, click one to see its links'
-    +(m!=='writes'&&STATS_META.started?' · '+serverAge():'');
+    +(m!=='writes'&&m!=='reads'&&STATS_META.started?' · '+serverAge():'');
   sList.innerHTML=rows.map((r,i)=>{ const f=logf(r.v,0,max), w=Math.max(3,Math.round(f*100));
     return '<a data-top="'+E(r.t||'')+'" title="'+E(r.n)+'"'+(r.t?'':' style="opacity:.55"')+'>'
       +'<span style="color:#666;display:inline-block;width:20px">'+(i+1)+'</span>'
@@ -995,20 +1089,29 @@ document.addEventListener('drop',e=>{ e.preventDefault();
   r.readAsText(f); });
 fit();
 applyHeat();
+// load numbers that came in an .er.json are baked in; dropping a stats.json replaces them
+const EMBEDDED_STATS = __STATS__;
+if(EMBEDDED_STATS) loadStats(EMBEDDED_STATS,'from the .er.json');
 </script>
 </body>
 </html>'''
 
-def build_html(L, order, tables, fkset, title):
+def build_html(L, order, tables, fkset, title, extras=None, stats=None):
     tabs = "\n".join(table_markup(n, tables[n], L["x"][n], L["y"][n], fkset, pad="      ") for n in order)
+    extras = extras or {}
+    def rel(e):
+        d = {"f": e["f"], "t": e["t"], "foff": round(e["foff"], 1), "toff": round(e["toff"], 1),
+             "fc": e["fc"], "tc": e["tc"], "fcol": e["fcol"], "tcol": e["tcol"]}
+        d.update(extras.get((e["f"], e["fcol"], e["t"], e["tcol"]), {}))   # kind / on / where from an .er.json
+        return d
     data = {
         "tables": [{"name": n, "x": round(L["x"][n]), "y": round(L["y"][n]),
                     "w": L["W"][n], "h": L["H"][n]} for n in order],
-        "rels": [{"f": e["f"], "t": e["t"], "foff": round(e["foff"], 1), "toff": round(e["toff"], 1),
-                  "fc": e["fc"], "tc": e["tc"], "fcol": e["fcol"], "tcol": e["tcol"]} for e in L["E"]],
+        "rels": [rel(e) for e in L["E"]],
     }
     return (HTML_TPL.replace("__DEFS__", DEFS)
                     .replace("__TABLES__", tabs)
+                    .replace("__STATS__", json.dumps(stats, ensure_ascii=False).replace("</", "<\\/"))
                     .replace("__DATA__", json.dumps(data, ensure_ascii=False))
                     .replace("__VW__", str(L["cw"]))
                     .replace("__VH__", str(L["ch"]))
@@ -1016,9 +1119,9 @@ def build_html(L, order, tables, fkset, title):
 
 # ----------------------------------------------------------------------------
 def main():
-    ap = argparse.ArgumentParser(description="Untangle a DBML schema into an interactive ER diagram.")
+    ap = argparse.ArgumentParser(description="Untangle a DBML / .er.json schema into an interactive ER diagram.")
     ap.add_argument("dbml", nargs="+",
-                    help="input .dbml file(s); with several files they are merged "
+                    help="input .dbml or .er.json file(s); with several files they are merged "
                          "and a table redefined in a later file wins")
     ap.add_argument("-o", "--out", help="output basename (default: input name)")
     ap.add_argument("--seeds", type=int, default=10, help="layout attempts (more = better, slower)")
@@ -1029,7 +1132,7 @@ def main():
                     help="lay out even a very large schema (slow: the layout is roughly quadratic)")
     args = ap.parse_args()
 
-    order, tables, refs = merge_files(args.dbml, quiet=args.quiet)
+    order, tables, refs, extras, stats = merge_files(args.dbml, quiet=args.quiet)
     if not args.quiet:
         print(f"parsed {len(tables)} tables, {len(refs)} relationships")
     if not tables:
@@ -1046,6 +1149,8 @@ def main():
         print(f"layout: crossings={L['crossings']} length={L['length']:.0f} canvas={L['cw']}x{L['ch']}")
 
     base = args.out or os.path.splitext(args.dbml[0])[0]
+    if not args.out and base.lower().endswith(".er"):     # shop.er.json -> shop.html
+        base = base[:-3]
     title = os.path.basename(base)
     fkset = fk_columns(refs)
 
@@ -1053,7 +1158,7 @@ def main():
         open(base + ".svg", "w", encoding="utf-8").write(build_static_svg(L, order, tables, fkset, title))
         if not args.quiet: print("wrote", base + ".svg")
     if not args.no_html:
-        open(base + ".html", "w", encoding="utf-8").write(build_html(L, order, tables, fkset, title))
+        open(base + ".html", "w", encoding="utf-8").write(build_html(L, order, tables, fkset, title, extras, stats))
         if not args.quiet: print("wrote", base + ".html")
 
 if __name__ == "__main__":

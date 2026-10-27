@@ -61,11 +61,11 @@
 <body>
 <div id="bar">
   <strong style="color:#fff">DBML&nbsp;ER</strong>
-  <button id="open" class="primary">Open .dbml</button>
-  <button id="add" title="Merge another .dbml into the current schema (later file wins)">+ Add .dbml</button>
+  <button id="open" class="primary" title=".dbml, or .er.json from er_collect.py / the AX export">Open</button>
+  <button id="add" title="Merge another .dbml / .er.json into the current schema (later file wins)">+ Add</button>
   <button id="sample">Load sample</button>
-  <input id="file" type="file" accept=".dbml,.txt" multiple style="display:none">
-  <input id="file2" type="file" accept=".dbml,.txt" multiple style="display:none">
+  <input id="file" type="file" accept=".dbml,.txt,.json" multiple style="display:none">
+  <input id="file2" type="file" accept=".dbml,.txt,.json" multiple style="display:none">
   <input id="find" type="search" placeholder="find table…" autocomplete="off">
   <button id="zin">+</button><button id="zout">&minus;</button><button id="fit">Fit</button>
   <span id="zlabel" style="color:#888; min-width:42px; text-align:center;">100%</span>
@@ -76,7 +76,7 @@
   </label>
   <span style="width:1px;height:22px;background:var(--line);margin:0 2px;"></span>
   <label title="Colour tables by a metric from stats.json">Heat
-    <select id="heat"><option value="off" selected>off</option><option value="rows">rows</option><option value="writes">writes</option><option value="size">size</option></select>
+    <select id="heat"><option value="off" selected>off</option><option value="rows">rows</option><option value="writes">writes</option><option value="reads">reads</option><option value="size">size</option></select>
   </label>
   <button id="statsbtn" title="Load stats.json (or just drop it on the page)">Stats…</button>
   <input id="statsfile" type="file" accept=".json,application/json" style="display:none">
@@ -85,7 +85,7 @@
   <button id="relayout" title="Recompute the whole layout from scratch">Re-layout</button>
   <button id="save">Export SVG</button>
   <span class="sep"></span>
-  <span id="hint">wheel: zoom · drag: pan · click a table to highlight · drop .dbml (Shift = merge)</span>
+  <span id="hint">wheel: zoom · drag: pan · click a table to highlight · drop .dbml / .er.json (Shift = merge)</span>
 </div>
 
 <div id="stage">
@@ -107,10 +107,10 @@
   </svg>
   <div id="legend"><div class="lg-title"></div><div class="lg-bar"></div><div class="lg-scale"><span class="lg-min"></span><span class="lg-max"></span></div></div>
 </div>
-<div id="drop"><div class="box"><b>Drop a .dbml file here</b><br>or use “Open .dbml”. Drop several files (or “+ Add .dbml”) to merge schemas — the later file wins.<br>Everything runs in your browser — no upload, no Python.</div></div>
+<div id="drop"><div class="box"><b>Drop a .dbml or .er.json file here</b><br>or use “Open”. Drop several files (or “+ Add”) to merge schemas — the later file wins.<br>Everything runs in your browser — no upload, no Python.</div></div>
 <div id="side">
   <h3 id="s-title">No schema loaded</h3>
-  <div class="meta" id="s-meta">Open or drop a .dbml file, or load the sample.</div>
+  <div class="meta" id="s-meta">Open or drop a .dbml or .er.json file, or load the sample.</div>
   <div id="s-list"></div>
 </div>
 <div id="busy">Building layout…</div>
@@ -228,12 +228,12 @@ function computeLayout(order, tables, refs, seeds, fixedPos){
     const m={}; tables[n].forEach((c,idx)=>m[c.col]=idx); colIndex[n]=m; });
 
   const E=[];
-  refs.forEach(([ftab,fcol,ttab,tcol,fc,tc])=>{
+  refs.forEach(([ftab,fcol,ttab,tcol,fc,tc,kind,on,where])=>{
     if(ftab===ttab) return;
     const fi=colIndex[ftab][fcol], ti=colIndex[ttab][tcol];
     const foff=(fi!==undefined)?colOffset(fi):H[ftab]/2;
     const toff=(ti!==undefined)?colOffset(ti):H[ttab]/2;
-    E.push({f:ftab,t:ttab,foff,toff,fc,tc,fcol,tcol});
+    E.push({f:ftab,t:ttab,foff,toff,fc,tc,fcol,tcol,kind,on,where});
   });
 
   const deg={}; order.forEach(n=>deg[n]=0);
@@ -655,7 +655,7 @@ function resetPanel(){
   if(typeof renderTop==='function' && renderTop()) return;      // stats loaded -> ranking
   if(BIG){ renderHubs(); return; }
   if(MODEL){ sTitle.textContent=MODEL.order.length+' tables'; sMeta.textContent=MODEL.E.length+' relationships · '+MODEL.crossings+' crossings · click a table'; }
-  else { sTitle.textContent='No schema loaded'; sMeta.textContent='Open or drop a .dbml file, or load the sample.'; }
+  else { sTitle.textContent='No schema loaded'; sMeta.textContent='Open or drop a .dbml or .er.json file, or load the sample.'; }
   sList.innerHTML=''; sList.dataset.key='';
 }
 function panel(name){
@@ -665,17 +665,23 @@ function panel(name){
   let h='';
   const st=STATS[name];
   if(st){   // all three numbers for the selected table, plus writes per day when the uptime is known
-    const perDay=(st.writes!==undefined&&STATS_META.uptime>0)?' \u2248 '+fmtNum(st.writes/STATS_META.uptime,'writes')+'/day':'';
+    const D=counterDays(), perDay=v=>(v!==undefined&&D>0)?' \u2248 '+fmtNum(v/D,'writes')+'/day':'';
     h+='<div class="grp">Load</div><div style="font-size:12px;line-height:1.6;color:#ccc;padding:0 7px">'
       +'rows <b>'+fmtNum(st.rows,'rows')+'</b> \u00b7 size <b>'+fmtNum(st.size,'size')+'</b><br>'
-      +'writes <b>'+fmtNum(st.writes,'writes')+'</b>'+perDay
-      +(STATS_META.started?'<br><small style="color:#888">'+esc(serverAge())+'</small>':'')+'</div>';
+      +'writes <b>'+fmtNum(st.writes,'writes')+'</b>'+perDay(st.writes)
+      +(st.reads!==undefined?'<br>reads <b>'+fmtNum(st.reads,'reads')+'</b>'+perDay(st.reads):'')
+      +(countedSince()?'<br><small style="color:#888">'+esc(countedSince())+'</small>':'')+'</div>';
   }
   const block=(title,arr,fn)=>{ if(!arr.length)return; h+=`<div class="grp">${title}</div>`;
     arr.slice().sort((a,b)=>fn(a).g.localeCompare(fn(b).g)).forEach(r=>{const o=fn(r);
-      h+=`<a data-go="${esc(o.g)}">${esc(o.g)} <small>${o.card}</small><br><small>${esc(o.via)}</small></a>`;});};
-  block('References (N→1)', out, r=>({g:r.t,card:`${r.fc}→${r.tc}`,via:`${r.fcol} → ${r.t}.${r.tcol}`}));
-  block('Referenced by (1→N)', inc, r=>({g:r.f,card:`${r.fc}→${r.tc}`,via:`${r.f}.${r.fcol} → ${r.tcol}`}));
+      h+=`<a data-go="${esc(o.g)}">${esc(o.g)} <small>${o.card}</small>${o.kind}<br><small>${esc(o.via)}</small>${o.where}</a>`;});};
+  // composite keys list every column pair; a link that is not a real FK says where it came from
+  const pairs=(r,pf,pt)=>(r.on&&r.on.length>1?r.on:[[r.fcol,r.tcol]]).map(p=>pf+p[0]+' → '+pt+p[1]).join(', ');
+  const kind=r=>r.kind&&r.kind!=='fk'?` <small style="color:#e0a040">${esc(r.kind)}</small>`:'';
+  const where=r=>r.where&&Object.keys(r.where).length?'<br><small style="color:#999">where '
+    +esc(Object.keys(r.where).map(k=>k+' = '+r.where[k]).join(' and '))+'</small>':'';
+  block('References (N→1)', out, r=>({g:r.t,card:`${r.fc}→${r.tc}`,via:pairs(r,'',r.t+'.'),kind:kind(r),where:where(r)}));
+  block('Referenced by (1→N)', inc, r=>({g:r.f,card:`${r.fc}→${r.tc}`,via:pairs(r,r.f+'.',''),kind:kind(r),where:where(r)}));
   sList.innerHTML=h; sList.dataset.key='';
   sList.querySelectorAll('a[data-go]').forEach(a=>a.addEventListener('click',ev=>{ ev.stopPropagation();
     const g=a.getAttribute('data-go');
@@ -800,7 +806,9 @@ document.getElementById('save').onclick=()=>{ if(!MODEL)return; lock=null; clear
 let STATS={}, STATS_ALL={}, STATS_MAP={}, STATS_META={}, HEAT='off', STATS_VER=0, LIST_CACHE={key:''};
 const HEAT_GRAD={ rows:['#2b5c8f','#4a3b89','#9c27b0'],
                   size:['#20505f','#2e7d6b','#7cb342'],
-                  writes:['#27ae60','#f39c12','#e74c3c'] };
+                  writes:['#27ae60','#f39c12','#e74c3c'],
+                  reads:['#1f4e79','#2980b9','#26c6da'] };
+const METRICS=['rows','writes','reads','size'];
 function lerpHex(a,b,f){
   const pa=a.match(/[0-9a-f]{2}/gi).map(h=>parseInt(h,16));
   const pb=b.match(/[0-9a-f]{2}/gi).map(h=>parseInt(h,16));
@@ -830,21 +838,27 @@ function normStats(json){
   const pick=(v,names)=>{ for(const n of names){ const x=v[n];
     if(x!==undefined&&x!==null&&x!==''&&!isNaN(Number(x))) return Number(x); } return undefined; };
   const out={};
-  for(const k in src){ const v=src[k];
+  for(const k in src){ let v=src[k];
     if(typeof v==='number'){ out[k]={rows:v}; continue; }
     if(!v||typeof v!=='object') continue;
+    if(v.stats&&typeof v.stats==='object') v=v.stats;        // .er.json: numbers sit under "stats"
+    else if(v.columns) continue;                               // .er.json table without load data
     out[k]={ rows  :pick(v,['rows','rowCount','row_count','n_live_tup','live_rows','count']),
              writes:pick(v,['writes','writesPerSec','writes_per_sec','total_writes','write_ops','mutations']),
+             reads :pick(v,['reads','total_reads','read_ops']),
              size  :pick(v,['size','size_mb','sizeMb','size_bytes','bytes','total_bytes','total_size_mb']) };
   }
-  const up=json&&json.uptime_days!==undefined&&!isNaN(Number(json.uptime_days))?Number(json.uptime_days):undefined;
+  const n=x=>json&&json[x]!==undefined&&json[x]!==null&&!isNaN(Number(json[x]))?Number(json[x]):undefined;
   return { stats:out, meta:{ period:json&&json.period, generated:json&&(json.generated_at||json.timestamp),
-                             started:json&&json.server_started, uptime:up } };
+                             started:json&&json.server_started, uptime:n('uptime_days'),
+                             since:json&&json.counters_since, sinceDays:n('counters_days') } };
 }
 // stats come keyed by DB names; schema uses DBML names - match loosely and report
-function matchStats(raw){
-  const NAMES=SCHEMA.order.length?SCHEMA.order:Object.keys(T), known=new Set(NAMES);
-  const idx={}; NAMES.forEach(n=>{ idx[n.toLowerCase()]=n; });
+// name k from a database / another file -> a table of NAMES, or null.
+// loose=true also drops a schema prefix (stats: public.orders -> orders); a schema
+// merge stays strict there, archive.orders must not land on orders.
+function nameResolver(NAMES, loose){
+  const known=new Set(NAMES), idx={}; NAMES.forEach(n=>{ idx[n.toLowerCase()]=n; });
   const bare=k=>String(k).replace(/["`]/g,'').replace(/^.*\./,'').toLowerCase();
   // Dynamics AX keeps SQL table names to 30 characters: a longer name is cut and
   // the table id appended (RMZ_CalculationMaterialCosts_ZTR -> RMZ_CALCULATIONMATERIALCO50619).
@@ -854,8 +868,12 @@ function matchStats(raw){
     const pre=m[1].toLowerCase();
     const c=NAMES.filter(n=>n.length>30&&n.toLowerCase().indexOf(pre)===0);
     return c.length===1?c[0]:null; };
+  return k=>known.has(k)?k:(idx[String(k).toLowerCase()]||(loose&&idx[bare(k)])||axTrunc(k)||null);
+}
+function matchStats(raw){
+  const NAMES=SCHEMA.order.length?SCHEMA.order:Object.keys(T), resolve=nameResolver(NAMES,true);
   const matched={}, unknown=[], map={};
-  Object.keys(raw).forEach(k=>{ const hit=known.has(k)?k:(idx[String(k).toLowerCase()]||idx[bare(k)]||axTrunc(k));
+  Object.keys(raw).forEach(k=>{ const hit=resolve(k);
     map[k]=hit||null;
     if(hit) matched[hit]=raw[k]; else unknown.push(k); });
   return {matched,unknown,map};
@@ -865,7 +883,7 @@ function loadStats(json,label){
   const matched=r.matched, unknown=r.unknown;
   STATS=matched; STATS_ALL=stats; STATS_MAP=r.map; STATS_META=meta; STATS_VER++;
   const withData=Object.keys(matched).length, total=(SCHEMA.order.length||Object.keys(T).length);
-  if(HEAT==='off'){ const pick=['rows','writes','size'].find(m=>Object.values(matched).some(v=>v[m]!==undefined));
+  if(HEAT==='off'){ const pick=METRICS.find(m=>Object.values(matched).some(v=>v[m]!==undefined));
     if(pick){ HEAT=pick; document.getElementById('heat').value=pick; } }
   applyHeat();
   if(!lock) resetPanel();
@@ -910,14 +928,21 @@ function applyHeat(){
 function serverAge(){ const M=STATS_META; if(!M.started) return '';
   const d=String(M.started).replace('T',' ').slice(0,16);
   return 'server up since '+d+(M.uptime!==undefined?' ('+M.uptime+' days)':''); }
+// counters can start later than the server (PostgreSQL pg_stat_reset) - then say so
+function countedSince(){ const M=STATS_META;
+  if(M.since&&String(M.since).slice(0,16)!==String(M.started||'').slice(0,16))
+    return 'counted since '+String(M.since).replace('T',' ').slice(0,16)+(M.sinceDays!==undefined?' ('+M.sinceDays+' days)':'');
+  return M.started?serverAge():''; }
+function counterDays(){ const M=STATS_META; return M.sinceDays!==undefined?M.sinceDays:M.uptime; }
 function metricLabel(m){
   if(m==='rows') return 'Rows - current';
   if(m==='size') return 'Size, data + indexes - current';
-  if(STATS_META.started) return 'Writes - '+serverAge();
-  return 'Writes'+(STATS_META.period?' - '+STATS_META.period:'');
+  const w=m==='reads'?'Reads':'Writes', c=countedSince();
+  if(c) return w+' - '+c;
+  return w+(STATS_META.period?' - '+STATS_META.period:'');
 }
 function topMetric(){ return HEAT!=='off' ? HEAT
-  : (['rows','writes','size'].find(m=>Object.values(STATS).some(v=>v[m]!==undefined))||null); }
+  : (METRICS.find(m=>Object.values(STATS).some(v=>v[m]!==undefined))||null); }
 function renderTop(){
   const m=topMetric(); if(!m||!Object.keys(STATS).length) return false;
   const key='top|'+m+'|'+STATS_VER+'|'+SCHEMA.order.length;
@@ -940,7 +965,7 @@ function renderTop(){
   if(!LIST_CACHE.count) return false;
   sTitle.textContent='All tables by load ('+LIST_CACHE.count+')';
   sMeta.textContent='by '+metricLabel(m)+' \u2014 biggest first, click one to see its links'
-    +(m!=='writes'&&STATS_META.started?' \u00b7 '+serverAge():'');
+    +(m!=='writes'&&m!=='reads'&&STATS_META.started?' \u00b7 '+serverAge():'');
   if(sList.dataset.key!==key){ sList.innerHTML=LIST_CACHE.html; sList.dataset.key=key; }
   return true;
 }
@@ -964,6 +989,19 @@ function flash(msg){ hintEl.textContent=msg; hintEl.style.color='#ffd54f';
 // file replaces the older definition; relationships are de-duplicated.
 function mergeInto(parsed, merge){
   if(!merge){ SCHEMA={order:[],tables:{},refs:[]}; POS={}; SOURCES=[]; }
+  else if(SCHEMA.order.length){
+    // the same table under another spelling (INVENTTRANS from SQL Server, InventTrans
+    // from AX) is one table: keep the name already on screen
+    const resolve=nameResolver(SCHEMA.order,false), ren={};
+    parsed.order.forEach(n=>{ const h=resolve(n); if(h&&h!==n) ren[n]=h; });
+    if(Object.keys(ren).length){
+      const R=n=>ren[n]||resolve(n)||n, tables={};
+      parsed.order=parsed.order.map(R);
+      Object.keys(parsed.tables).forEach(n=>{ tables[R(n)]=parsed.tables[n]; });
+      parsed.tables=tables;
+      parsed.refs=parsed.refs.map(r=>{ const c=r.slice(); c[0]=R(r[0]); c[2]=R(r[2]); return c; });
+    }
+  }
   const added=[], updated=[];
   parsed.order.forEach(n=>{
     if(n in SCHEMA.tables) updated.push(n); else { SCHEMA.order.push(n); added.push(n); }
@@ -973,7 +1011,36 @@ function mergeInto(parsed, merge){
   const seen=new Set(SCHEMA.refs.map(key));
   let newRefs=0;
   parsed.refs.forEach(r=>{ const k=key(r); if(!seen.has(k)){ seen.add(k); SCHEMA.refs.push(r); newRefs++; } });
+  fixRefCols();
   return {added,updated,newRefs};
+}
+// a link names ItemId, the table now has ITEMID (columns came from the database):
+// point the link at the column that exists, so it anchors on the right row
+function fixRefCols(){
+  const lc={}, get=t=>{ if(!lc[t]){ lc[t]={}; (SCHEMA.tables[t]||[]).forEach(c=>{ lc[t][c.col.toLowerCase()]=c.col; }); } return lc[t]; };
+  SCHEMA.refs.forEach(r=>{
+    if(r[0] in SCHEMA.tables){ const c=get(r[0])[String(r[1]).toLowerCase()]; if(c) r[1]=c; }
+    if(r[2] in SCHEMA.tables){ const c=get(r[2])[String(r[3]).toLowerCase()]; if(c) r[3]=c; } });
+}
+
+// .er.json (er_collect.py, the AX export): tables + columns + relations + load numbers in one file
+function isER(o){ return !!o&&typeof o==='object'&&!Array.isArray(o)
+  &&(/^er\//.test(String(o.format||''))||(!!o.tables&&Array.isArray(o.relations))); }
+function fromER(o){
+  const order=[], tables={}, refs=[], st={};
+  Object.keys(o.tables||{}).forEach(n=>{ const d=o.tables[n]||{};
+    order.push(n);
+    tables[n]=(d.columns||[]).map(c=>Array.isArray(c)
+      ? {col:String(c[0]),type:String(c[1]||''),pk:!!c[2]}
+      : {col:String(c.name),type:String(c.type||''),pk:!!c.pk});
+    if(d.stats) st[n]=d.stats; });
+  (o.relations||[]).forEach(r=>{ const on=r.on||[];
+    if(!r.from||!r.to||!on.length) return;
+    const c=String(r.card||'N:1').split(':');
+    // the first column pair anchors the line, all pairs and the kind go to the side panel
+    refs.push([String(r.from),String(on[0][0]),String(r.to),String(on[0][1]),c[0]||'N',c[1]||'1',r.kind||'',on,r.where||null]); });
+  const stats=Object.keys(st).length?Object.assign({},o,{tables:st,relations:undefined}):null;
+  return {order,tables,refs,stats};
 }
 
 // Build the layout from SCHEMA. Tables already on screen keep their spot
@@ -995,7 +1062,7 @@ function edgesFor(order,tables,refs){
     if(f===t||!(f in ci)||!(t in ci)) return;
     const fi=ci[f][fc], ti=ci[t][tc];
     E.push({f:f,t:t,foff:fi!==undefined?colOffset(fi):H[f]/2,toff:ti!==undefined?colOffset(ti):H[t]/2,
-            fc:r[4],tc:r[5],fcol:fc,tcol:tc}); });
+            fc:r[4],tc:r[5],fcol:fc,tcol:tc,kind:r[6],on:r[7],where:r[8]}); });
   return {W:W,H:H,E:E};
 }
 function enterBigMode(){
@@ -1046,7 +1113,7 @@ sList.addEventListener('click',ev=>{
   ev.stopPropagation();
   const n=a.hasAttribute('data-top')?a.getAttribute('data-top'):a.getAttribute('data-hub');
   if(n&&((n in SCHEMA.tables)||T[n])) enterFocus(n);
-  else flash('no relations known for '+a.getAttribute('title')+' - merge the .dbml that describes it');
+  else flash('no relations known for '+a.getAttribute('title')+' - merge the file that describes it');
 });
 
 function buildAndRender(opts){
@@ -1096,19 +1163,35 @@ function loadFiles(list, merge){
   if(!files.length) return;
   busy.classList.add('on');
   setTimeout(async ()=>{
-    let added=0, updated=0, newRefs=0, didMerge=false;
+    let added=0, updated=0, newRefs=0, didMerge=false, schemas=0;
+    const stats=[];                      // applied after the schema is drawn - they match against it
     try{
       for(let i=0;i<files.length;i++){
         const text=await readFile(files[i]);
-        const parsed=parseDBML(text);
+        let parsed=null;
+        if(/^\s*[\{\[]/.test(text)){
+          let obj; try{ obj=JSON.parse(text); }catch(err){ alert(files[i].name+': not valid JSON - '+err.message); continue; }
+          if(!isER(obj)){ stats.push([obj,files[i].name]); continue; }     // a plain stats.json
+          const er=fromER(obj);
+          if(er.stats) stats.push([er.stats,files[i].name]);
+          parsed=er;
+        } else parsed=parseDBML(text);
         if(!parsed.order.length){ alert('No tables found in '+files[i].name+' — skipped.'); continue; }
-        const m=(merge||i>0) && SCHEMA.order.length>0;
-        didMerge=didMerge||m;
+        const m=(merge||schemas>0) && SCHEMA.order.length>0;
+        didMerge=didMerge||m; schemas++;
         const info=mergeInto(parsed,m);
         added+=info.added.length; updated+=info.updated.length; newRefs+=info.newRefs;
         SOURCES.push(files[i].name);
       }
-      buildAndRender({keepView:didMerge});
+      if(schemas) buildAndRender({keepView:didMerge});
+      if(stats.length){
+        if(!SCHEMA.order.length&&!Object.keys(T).length) alert('Load numbers need a schema first - open a .dbml or .er.json, then drop the stats again.');
+        else if(stats.length===1) loadStats(stats[0][0],stats[0][1]);
+        else {                           // several sources: one table map, the later file wins
+          const all={tables:{}}; stats.forEach(([j])=>{ const n=normStats(j);
+            Object.assign(all.tables,n.stats); Object.keys(j).forEach(k=>{ if(k!=='tables'&&k!=='relations') all[k]=j[k]; }); });
+          loadStats(all,stats.length+' files'); }
+      }
       if(didMerge) flash('merged: +'+added+' new, '+updated+' updated, +'+newRefs+' refs');
     }catch(err){ alert('Failed: '+err.message); console.error(err); }
     busy.classList.remove('on');
@@ -1127,11 +1210,12 @@ document.getElementById('relayout').onclick=()=>{ if(!MODEL)return; busy.classLi
 ['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{ e.preventDefault(); document.body.classList.add('dragover'); }));
 ['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{ e.preventDefault(); if(ev==='drop'||e.relatedTarget===null) document.body.classList.remove('dragover'); }));
 document.addEventListener('drop',e=>{
+  // schemas first (.dbml, .er.json), stats.json last - loadFiles sorts them out by content
   const all=Array.prototype.slice.call(e.dataTransfer.files||[]);
-  const js=all.filter(f=>/\.json$/i.test(f.name)), db=all.filter(f=>!/\.json$/i.test(f.name));
-  js.forEach(f=>{ const r=new FileReader(); r.onload=()=>{ try{ loadStats(JSON.parse(r.result),f.name); }
-    catch(err){ alert('Not valid JSON: '+err.message); } }; r.readAsText(f); });
-  if(db.length) loadFiles(db, e.shiftKey);
+  const isStats=f=>/\.json$/i.test(f.name)&&!/\.er\.json$/i.test(f.name);
+  const list=all.filter(f=>!isStats(f)).concat(all.filter(isStats));
+  // a stats file alone, or Shift, never replaces what is on screen
+  if(list.length) loadFiles(list, e.shiftKey||list.every(isStats));
 });
 
 // ---------- embedded sample ----------

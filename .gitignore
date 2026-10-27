@@ -18,3 +18,5 @@ Thumbs.db
 # Real database statistics must never land in this public repo.
 stats*.json
 *.stats.json
+# ...and neither must schemas collected from real databases (er_collect.py, the AX export)
+*.er.json
