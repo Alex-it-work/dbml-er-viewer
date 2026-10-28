@@ -43,16 +43,6 @@ def read_text(path):
             continue
     return raw.decode("utf-8", "replace")
 
-def strip_comments(text):
-    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)   # block comments
-    out = []
-    for line in text.splitlines():
-        # drop // line comments (naive; DBML rarely has // inside strings)
-        i = line.find("//")
-        if i >= 0:
-            line = line[:i]
-        out.append(line)
-    return "\n".join(out)
 
 def unquote(s):
     s = s.strip()
@@ -71,24 +61,68 @@ def short_name(tok):
 CARD = {">": ("N", "1"), "<": ("1", "N"), "-": ("1", "1"), "<>": ("N", "N")}
 
 def parse_ref_endpoint(tok):
+    """Table.col, schema.Table.col, "a.b".col, Table.(a, b) -> (table, first column, all columns)."""
     tok = tok.strip()
-    # Table.Col  or  Table.(Col1, Col2)
-    m = re.match(r'(.+?)\.\(?\s*([^,\)\s]+)', tok)
-    if not m:
-        return None, None
-    return short_name(m.group(1)), unquote(m.group(2))
+    m = re.match(r'^(.*?)\.\(\s*([^)]*)\)\s*$', tok)
+    if m:
+        table, cols = m.group(1), [unquote(c) for c in m.group(2).split(",") if c.strip()]
+    else:
+        parts = re.findall(r'"[^"]*"|`[^`]*`|[^.]+', tok)
+        if len(parts) < 2:
+            return None, None, []
+        table, cols = ".".join(parts[:-1]), [unquote(parts[-1])]
+    if not cols:
+        return None, None, []
+    return short_name(table), cols[0], cols
 
 OP_RE = r'\??[<>-]{1,2}\??'          # >, <, -, <> and the nullable forms <?, ?<?
 
-def add_ref(refs, a, ac, b, bc, op):
+# Conventions that keep the extras inside plain, valid DBML:
+#   Ref edt_ItemId: ...           the name prefix says where the link comes from
+#                                 (fk_ / edt_ / table_ / manual_ / inferred_)
+#   Ref ...: A.(a, b) > B.(c, d)  composite key - every pair is kept
+#   Ref ... // where from.TransType = 2 and to.Kind = 'x'   fixed-value conditions
+KIND_RE = re.compile(r'^(fk|edt|table|manual|inferred)_', re.I)
+
+def parse_where(comment):
+    m = re.match(r'^\s*where\s+(.+)$', comment or "", re.I)
+    if not m:
+        return None
+    w = {}
+    for p in re.split(r'\s+and\s+', m.group(1), flags=re.I):
+        q = re.match(r'^\s*(.+?)\s*=\s*(.+?)\s*$', p)
+        if q:
+            v = q.group(2)
+            w[q.group(1)] = (float(v) if "." in v else int(v)) if re.match(r'^-?\d+(\.\d+)?$', v) \
+                            else re.sub(r"^'(.*)'$", r"\1", v)
+    return w or None
+
+def add_ref(refs, A, B, op, name="", where=None, extras=None):
     op = op.replace("?", "")            # "<?" / "?<?" carry nullability, not cardinality
     fc, tc = CARD.get(op, ("N", "1"))
-    if a and b and ac and bc:
-        refs.append((a, ac, b, bc, fc, tc))
+    (a, ac, acs), (b, bc, bcs) = A, B
+    if not (a and b and ac and bc):
+        return
+    refs.append((a, ac, b, bc, fc, tc))
+    if extras is not None:
+        x = {}
+        km = KIND_RE.match(name or "")
+        if km:
+            x["kind"] = km.group(1).lower()
+        if len(acs) > 1 and len(acs) == len(bcs):
+            x["on"] = [[p, q] for p, q in zip(acs, bcs)]
+        if where:
+            x["where"] = where
+        if x:
+            extras[(a, ac, b, bc)] = x
 
-def parse_dbml(text):
-    text = strip_comments(text)
-    lines = text.split("\n")
+def parse_dbml(text, extras=None):
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)   # block comments
+    raw = text.splitlines()
+    # // line comments are dropped (naive; DBML rarely has // inside strings) but kept
+    # aside: a Ref's "// where ..." carries its fixed-value conditions
+    comments = [l[l.find("//") + 2:] if "//" in l else "" for l in raw]
+    lines = [l[:l.find("//")] if "//" in l else l for l in raw]
     tables = {}          # name -> list of (col, type, pk)
     order = []           # table name order
     refs = []            # (ftab, fcol, ttab, tcol, fcard, tcard)
@@ -105,26 +139,30 @@ def parse_dbml(text):
 
         # ---- Ref (short or block) ----
         if low.startswith("ref"):
+            mn = re.match(r'^ref\b\s*([^:{]*?)\s*[:{]', line, re.I)
+            rname = mn.group(1) if mn else ""
             mref = re.match(r'ref\b[^:{]*:?\s*(.*)$', line, re.I)
             body = mref.group(1).strip() if mref else ""
+
+            def one(part, where):
+                part = re.sub(r'\s*\[[^\]]*\]\s*$', '', part)   # [delete: cascade] etc. are settings
+                mm = re.match(r'^\s*(.+?)\s*(' + OP_RE + r')\s*(.+?)\s*$', part)
+                if mm:
+                    add_ref(refs, parse_ref_endpoint(mm.group(1)), parse_ref_endpoint(mm.group(3)),
+                            mm.group(2), rname, where, extras)
+
             if "{" in line and ":" not in line.split("{")[0]:
                 # block form: collect until }
                 block = line[line.index("{") + 1:]
                 while "}" not in block and i < n:
-                    block += " " + lines[i]; i += 1
+                    block += "\n" + lines[i]; i += 1
                 block = block.split("}")[0]
-                for part in re.split(r'[\n,]', block):
-                    mm = re.match(r'\s*(.+?)\s*(' + OP_RE + r')\s*(.+?)\s*$', part)
-                    if mm:
-                        a, ac = parse_ref_endpoint(mm.group(1))
-                        b, bc = parse_ref_endpoint(mm.group(3))
-                        add_ref(refs, a, ac, b, bc, mm.group(2))
+                # one ref per line or comma-separated - but not the commas inside Table.(a, b)
+                for part in re.split(r'\n|,(?![^(]*\))', block):
+                    if part.strip():
+                        one(part, None)
                 continue
-            mm = re.match(r'(.+?)\s*(' + OP_RE + r')\s*(.+?)\s*$', body)
-            if mm:
-                a, ac = parse_ref_endpoint(mm.group(1))
-                b, bc = parse_ref_endpoint(mm.group(3))
-                add_ref(refs, a, ac, b, bc, mm.group(2))
+            one(body, parse_where(comments[i - 1]))
             continue
 
         # ---- skip non-table blocks ----
@@ -147,6 +185,7 @@ def parse_dbml(text):
                 if i < n:
                     i += 1
             cols = []
+            ix_pk = set()
             depth = 1
             while i < n and depth > 0:
                 raw = lines[i]; i += 1
@@ -157,25 +196,31 @@ def parse_dbml(text):
                 if depth <= 0:
                     break                               # table closed
                 cl = raw.strip()
+                # composite primary key:  indexes { (a, b) [pk] }
+                ix = inner and re.match(r'^\(([^)]*)\)\s*\[([^\]]*)\]', cl)
+                if ix and re.search(r'\b(pk|primary key)\b', ix.group(2), re.I):
+                    ix_pk.update(unquote(c) for c in ix.group(1).split(","))
                 if inner or not cl or cl.startswith("("):
                     continue
                 if cl.lower().startswith("indexes") or cl.lower().startswith("note"):
                     continue
                 # column:  name  type  [settings]
-                cm = re.match(r'("[^"]+"|`[^`]+`|[^\s\[]+)\s+([^\[\s]+(?:\([^)]*\))?)\s*(\[.*\])?', cl)
+                # a type with spaces comes quoted: created_at "timestamp with time zone"
+                cm = re.match(r'("[^"]+"|`[^`]+`|[^\s\[]+)\s+("[^"]+"|[^\[\s]+(?:\([^)]*\))?)\s*(\[.*\])?', cl)
                 if not cm:
                     cm = re.match(r'("[^"]+"|`[^`]+`|\S+)\s*(\[.*\])?', cl)
                     if not cm:
                         continue
                     cname = unquote(cm.group(1)); ctype = ""; settings = cm.group(2) or ""
                 else:
-                    cname = unquote(cm.group(1)); ctype = cm.group(2); settings = cm.group(3) or ""
+                    cname = unquote(cm.group(1)); ctype = unquote(cm.group(2)); settings = cm.group(3) or ""
                 pk = bool(re.search(r'\b(pk|primary key)\b', settings, re.I))
                 im = re.search(r'ref:\s*(' + OP_RE + r')\s*([^\],]+)', settings, re.I)
                 if im:
-                    b, bc = parse_ref_endpoint(im.group(2))
-                    add_ref(refs, tname, cname, b, bc, im.group(1))
+                    add_ref(refs, (tname, cname, [cname]), parse_ref_endpoint(im.group(2)), im.group(1),
+                            extras=extras)
                 cols.append((cname, ctype, pk))
+            cols = [(c, ty, pk or c in ix_pk) for c, ty, pk in cols]
             if tname not in tables:
                 order.append(tname)
             tables[tname] = cols
@@ -246,10 +291,17 @@ def merge_files(paths, quiet=False):
     for path in paths:
         text = read_text(path).lstrip("﻿")
         if text.lstrip().startswith("{"):
-            o, t, r, x, s = parse_er(json.loads(text))
+            obj = json.loads(text)
+            if not (str(obj.get("format", "")).startswith("er/") or isinstance(obj.get("relations"), list)):
+                stats = obj                      # a plain stats.json: baked into the page
+                if not quiet:
+                    print(f"  {os.path.basename(path)}: load numbers")
+                continue
+            o, t, r, x, s = parse_er(obj)
             stats = s or stats
         else:
-            (o, t, r), x = parse_dbml(text), {}
+            x = {}
+            o, t, r = parse_dbml(text, x)
         if order:                                # keep the name already in the schema
             resolve = name_resolver(set(order))
             R = lambda n: resolve(n) or n

@@ -20,3 +20,6 @@ stats*.json
 *.stats.json
 # ...and neither must schemas collected from real databases (er_collect.py, the AX export)
 *.er.json
+# er_collect.py writes <database>.dbml - only the hand-made examples belong here
+*.dbml
+!examples/*.dbml

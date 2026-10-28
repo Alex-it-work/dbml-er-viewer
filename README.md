@@ -83,8 +83,8 @@ Both paths share the same DBML parser and force-directed layout — the Python s
 ## Straight from a database: `er_collect.py`
 
 No DBML at hand? Read the schema, the foreign keys and the load numbers right
-out of the database into one `.er.json`, then open it in `index.html` (or pass
-it to `dbml_to_er.py`):
+out of the database. You get a plain `.dbml` and a `.stats.json` - open the
+first in `index.html` (or pass it to `dbml_to_er.py`), drop the second on top:
 
 ```bash
 python er_collect.py sqlserver -S SERVER -d BASE                # Windows login
@@ -104,22 +104,53 @@ python er_collect.py odbc      --dsn "DSN=Legacy;UID=me" --count  # anything wit
 | SQLite | built in | rows, size |
 | any ODBC source | `pyodbc` | rows with `--count` |
 
-Only the driver for the engine you use is needed. Passwords never go on the
-command line: set `ER_PASSWORD` or type it when asked. Whatever the login may
-not see (`VIEW SERVER STATE`, `DBA_SEGMENTS`, `V$` views...) is skipped with a
-warning - the schema and relationships are still written.
+Only the driver for the engine you use is needed.
 
-### The `.er.json` format
+**Signing in.** SQL Server without `-U` uses Windows authentication - your own
+Windows account, no password anywhere. Everything else (and SQL Server with
+`-U`) takes the password from the `ER_PASSWORD` environment variable or asks
+for it, hidden; it never goes on the command line, where it would stay in the
+shell history, and is never written to any file. The script only reads the
+system catalogs. A read-only login is enough; what it may not see
+(`VIEW SERVER STATE`, `pg_read_all_stats`, `DBA_SEGMENTS`, `V$` views...) is
+skipped with a warning - the schema and relationships are still written.
 
-One file carries the schema, the relationships and the load - or any part of
-it; several files dropped together are merged, the later one wins.
+## Relationships the database does not know about
+
+Some systems keep their relationships outside the database - Dynamics AX
+declares them in its own metadata and creates no foreign keys at all. Export
+them as DBML (the AX job does), read the tables and the load with
+`er_collect.py`, and merge the two in the viewer: table names match ignoring
+case (`INVENTTRANS` = `InventTrans`), AX's 30-character SQL names (a longer
+name is cut and the table id appended) find their table, and a link follows
+the column spelling that exists.
+
+What plain DBML has no field for rides on three conventions. They are valid
+DBML, so other DBML tools still read the file - they just see ordinary refs
+and comments:
+
+```dbml
+// where the link is declared: the ref name prefix  fk_ / edt_ / table_ / manual_ / inferred_
+Ref edt_InventTrans_ItemId: InventTrans.ItemId > InventTable.ItemId
+
+// a composite key is one ref, every column pair is kept
+Ref table_Lines_Order: Lines.(OrderId, LineNum) > Orders.(Id, LineNum)
+
+// fixed-value conditions go into a comment after the ref
+Ref table_Trans_Origin: Trans.OriginId > Origin.RecId // where to.Category = 2
+```
+
+The side panel shows the kind, all key pairs and the conditions of each link.
+
+### One file instead of two: `.er.json`
+
+`er_collect.py --format er` writes schema, relationships and load into a single
+`.er.json`; the viewer opens it like a `.dbml` and merges it with other files.
 
 ```json
 {
   "format": "er/1",
-  "source": { "engine": "sqlserver", "database": "shop", "version": "SQL Server 16.0" },
   "server_started": "2026-09-12T08:30:00", "uptime_days": 45.0,
-  "counters_since": "2026-09-12T08:30:00", "counters_days": 45.0,
   "tables": {
     "orders": { "columns": [ { "name": "id", "type": "int", "pk": true },
                              { "name": "user_id", "type": "int" } ],
@@ -127,26 +158,10 @@ it; several files dropped together are merged, the later one wins.
   },
   "relations": [
     { "from": "orders", "to": "users", "on": [["user_id", "id"]],
-      "kind": "fk", "card": "N:1", "name": "fk_orders_user" }
+      "kind": "fk", "card": "N:1", "where": { "from.status": 1 } }
   ]
 }
 ```
-
-What DBML cannot say and `.er.json` can:
-
-- `kind` - where the relationship comes from: `fk` (declared in the database),
-  or anything an outside tool knows about: `edt` / `table` from Dynamics AX
-  metadata, `manual`, `inferred`;
-- `on` - every column pair of a composite key;
-- `where` - fixed-value conditions, e.g. `{ "from.TransType": 2 }`;
-- `stats` next to the table, with the moment counting started.
-
-This is how relationships that live outside the database get in: an ERP such as
-Dynamics AX keeps them in its own metadata, so its export writes `.er.json`
-relations, `er_collect.py` reads the tables and the load from SQL Server, and
-the two files are merged in the viewer. Table names are matched ignoring case
-(`INVENTTRANS` = `InventTrans`), and AX's 30-character SQL names (a longer
-name is cut and the table id appended) find their table.
 
 ## Where stats.json comes from
 
@@ -202,7 +217,8 @@ Parses the common DBML constructs:
 - `Table name { column type [settings] }` — with `schema.table` and `as alias`.
 - Column settings: `[pk]` / `[primary key]`, and inline `[ref: > other.table.col]`.
 - `Ref:` short form and `Ref { ... }` block form, operators `>`, `<`, `-`, `<>`.
-- Composite ref endpoints `Table.(a, b)` (the first column is used as the anchor).
+- Composite ref endpoints `Table.(a, b)` - every column pair is kept, the first one anchors the line.
+- Composite primary keys in `indexes { (a, b) [pk] }`, quoted names and types (`"timestamp with time zone"`).
 - `Project`, `Enum`, `TableGroup`, `Note` blocks are skipped.
 - Input is read as UTF-8 / UTF-16 / CP1251 automatically.
 

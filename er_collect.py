@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 """
 er_collect.py - read tables, columns, keys, relationships and load statistics
-straight from a database and write them as one .er.json file for the viewer.
+straight from a database and write them for the viewer:
+  <database>.dbml        schema + foreign keys, plain DBML (default)
+  <database>.stats.json  rows / size / writes / reads
+or, with --format er, both in one <database>.er.json.
 
   python er_collect.py sqlserver -S SERVER -d BASE                  (Windows login)
   python er_collect.py sqlserver -S host,1433 -d BASE -U me         (SQL login)
@@ -30,7 +33,7 @@ Load numbers and where they come from:
 Anything the login is not allowed to see is left out with a warning - the
 schema and relationships are still written.
 """
-import argparse, datetime, getpass, json, os, sys
+import argparse, datetime, getpass, json, os, re, sys
 
 FORMAT = "er/1"
 
@@ -640,6 +643,55 @@ def assemble(r):
     out["relations"] = rels
     return out
 
+IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+def dq(name):
+    """DBML identifier: bare when it can be, "quoted" otherwise (AX has names like _X$)."""
+    return name if IDENT.match(name) else '"%s"' % name.replace('"', "'")
+
+def write_dbml(out, path):
+    """Schema and relationships as plain DBML. What DBML has no field for rides on
+    conventions the viewer reads and other DBML tools simply ignore:
+    the ref name prefix is the kind (fk_...), a composite key is Table.(a, b)."""
+    src = out["source"]
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write("// %s, database %s - er_collect.py, %s\n\n" % (
+            src.get("version", src.get("engine", "")), src.get("database", "?"), out["generated_at"]))
+        for name, t in out["tables"].items():
+            f.write("Table %s {\n" % dq(name))
+            pk = [c["name"] for c in t["columns"] if c.get("pk")]
+            for c in t["columns"]:
+                ty = c["type"] or "unknown"
+                if re.search(r'[\s"]', ty):
+                    ty = '"%s"' % ty.replace('"', "'")
+                st = (["pk"] if c.get("pk") and len(pk) == 1 else []) + (["not null"] if c.get("null") is False else [])
+                f.write("  %s %s%s\n" % (dq(c["name"]), ty, " [%s]" % ", ".join(st) if st else ""))
+            if len(pk) > 1:                    # DBML allows one column [pk]; a composite key is an index
+                f.write("  indexes {\n    (%s) [pk]\n  }\n" % ", ".join(dq(c) for c in pk))
+            f.write("}\n\n")
+        used = set()
+        for r in out["relations"]:
+            name = re.sub(r"\W", "_", "%s_%s" % (r.get("kind") or "fk", r.get("name") or r["from"]))
+            base, k = name, 2
+            while name in used:                # ref names must be unique
+                name, k = "%s_%d" % (base, k), k + 1
+            used.add(name)
+            end = lambda t, cols: "%s.%s" % (dq(t), dq(cols[0]) if len(cols) == 1
+                                             else "(%s)" % ", ".join(dq(c) for c in cols))
+            op = "-" if r.get("card") == "1:1" else ">"
+            f.write("Ref %s: %s %s %s\n" % (name, end(r["from"], [p[0] for p in r["on"]]), op,
+                                            end(r["to"], [p[1] for p in r["on"]])))
+
+def write_stats(out, path):
+    """Load numbers in the stats.json shape the viewer (and the sql/ scripts) use."""
+    head = {k: v for k, v in out.items() if k not in ("tables", "relations", "format")}
+    rows = [(n, t["stats"]) for n, t in out["tables"].items() if t.get("stats")]
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(json.dumps(head, ensure_ascii=False)[:-1] + ',\n"tables": {\n')
+        for i, (n, s) in enumerate(rows):
+            f.write(" %s: %s%s\n" % (json.dumps(n, ensure_ascii=False), json.dumps(s), "," if i < len(rows) - 1 else ""))
+        f.write("}}\n")
+
 def write(out, path):
     # one table / one relationship per line: readable, diffable, and not 50 MB of indentation
     with open(path, "w", encoding="utf-8", newline="\n") as f:
@@ -673,7 +725,9 @@ def main():
     ap.add_argument("--count", action="store_true", help="odbc: SELECT COUNT(*) every table for row counts")
     ap.add_argument("--no-count", action="store_true", help="sqlite: skip COUNT(*)")
     ap.add_argument("--timeout", type=int, default=15, help="connect timeout, seconds")
-    ap.add_argument("-o", "--out", help="output file (default: <database>.er.json)")
+    ap.add_argument("--format", choices=("dbml", "er"), default="dbml",
+                    help="dbml: <name>.dbml + <name>.stats.json (default); er: one <name>.er.json")
+    ap.add_argument("-o", "--out", help="output name without extension (default: the database name)")
     ap.add_argument("-q", "--quiet", action="store_true")
     a = ap.parse_args()
     QUIET = a.quiet
@@ -686,14 +740,23 @@ def main():
     t0 = datetime.datetime.now()
     raw = COLLECT[engine](a)
     out = assemble(raw)
-    name = a.out or "%s.er.json" % (os.path.splitext(os.path.basename(
-        str(out["source"].get("database") or engine)))[0].replace(",", "_"))
-    write(out, name)
+    base = a.out or os.path.splitext(os.path.basename(
+        str(out["source"].get("database") or engine)))[0].replace(",", "_")
+    base = re.sub(r"(\.er\.json|\.dbml|\.stats\.json|\.json)$", "", base, flags=re.I)
     nstat = sum(1 for t in out["tables"].values() if "stats" in t)
+    if a.format == "er":
+        files = [base + ".er.json"]
+        write(out, files[0])
+    else:
+        files = [base + ".dbml"]
+        write_dbml(out, files[0])
+        if nstat:
+            files.append(base + ".stats.json")
+            write_stats(out, files[1])
     log("%s: %d tables, %d columns, %d relationships, load data for %d tables (%.1f s) -> %s" % (
         out["source"].get("version", engine), len(out["tables"]),
         sum(len(t["columns"]) for t in out["tables"].values()), len(out["relations"]), nstat,
-        (datetime.datetime.now() - t0).total_seconds(), name))
+        (datetime.datetime.now() - t0).total_seconds(), ", ".join(files)))
 
 if __name__ == "__main__":
     main()

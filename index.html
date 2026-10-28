@@ -136,19 +136,40 @@ function shortName(tok){
   return parts.length?parts[parts.length-1]:tok;
 }
 const CARD={'>':['N','1'],'<':['1','N'],'-':['1','1'],'<>':['N','N']};
+// Table.col, schema.Table.col, "a.b".col, Table.(a, b) -> [table, first column, all columns]
 function refEndpoint(tok){
-  const m=tok.trim().match(/(.+?)\.\(?\s*([^,\)\s]+)/);
-  if(!m) return [null,null];
-  return [shortName(m[1]), unquote(m[2])];
+  tok=tok.trim(); let table, cols;
+  const m=tok.match(/^(.*?)\.\(\s*([^)]*)\)\s*$/);
+  if(m){ table=m[1]; cols=m[2].split(',').map(unquote).filter(Boolean); }
+  else { const parts=tok.match(/"[^"]*"|`[^`]*`|[^.]+/g)||[];
+    if(parts.length<2) return [null,null,[]];
+    cols=[unquote(parts.pop())]; table=parts.join('.'); }
+  if(!cols.length) return [null,null,[]];
+  return [shortName(table), cols[0], cols];
 }
+// Conventions that keep the extras inside plain, valid DBML:
+//   Ref edt_ItemId: ...           the name prefix says where the link comes from
+//                                 (fk_ / edt_ / table_ / manual_ / inferred_)
+//   Ref ...: A.(a, b) > B.(c, d)  composite key - every pair is kept
+//   Ref ... // where from.TransType = 2 and to.Kind = 'x'   fixed-value conditions
+const KIND_RE=/^(fk|edt|table|manual|inferred)_/i;
+function parseWhere(c){ const m=String(c||'').match(/^\s*where\s+(.+)$/i); if(!m) return null;
+  const w={}; m[1].split(/\s+and\s+/i).forEach(p=>{ const q=p.match(/^\s*(.+?)\s*=\s*(.+?)\s*$/); if(!q) return;
+    w[q[1]]=/^-?\d+(\.\d+)?$/.test(q[2])?Number(q[2]):q[2].replace(/^'(.*)'$/,'$1'); });
+  return Object.keys(w).length?w:null; }
 function parseDBML(text){
   text=text.replace(/\/\*[\s\S]*?\*\//g,'');           // block comments
-  const lines=text.split(/\r?\n/).map(l=>{ const i=l.indexOf('//'); return i>=0?l.slice(0,i):l; });
+  const raw=text.split(/\r?\n/), cmt=[];
+  const lines=raw.map((l,k)=>{ const i=l.indexOf('//'); cmt[k]=i>=0?l.slice(i+2):''; return i>=0?l.slice(0,i):l; });
   const tables={}, order=[], refs=[];
   const SKIP=['project','enum','tablegroup','note','indexes'];
   // '<?' / '?<?' (sql2dbml) mark nullability, not cardinality - strip the '?'
-  const addRef=(a,ac,b,bc,op)=>{ op=String(op).replace(/[?]/g,'');
-    const c=CARD[op]||['N','1']; if(a&&b&&ac&&bc) refs.push([a,ac,b,bc,c[0],c[1]]); };
+  const addRef=(A,B,op,name,where)=>{ op=String(op).replace(/[?]/g,'');
+    const c=CARD[op]||['N','1'], [a,ac,acs]=A, [b,bc,bcs]=B;
+    if(!(a&&b&&ac&&bc)) return;
+    const km=String(name||'').match(KIND_RE);
+    const on=acs.length>1&&acs.length===bcs.length?acs.map((x,k)=>[x,bcs[k]]):null;
+    refs.push([a,ac,b,bc,c[0],c[1],km?km[1].toLowerCase():'',on,where||null]); };
   let i=0; const n=lines.length;
   while(i<n){
     let line=lines[i].trim(); i++;
@@ -156,20 +177,21 @@ function parseDBML(text){
     const low=line.toLowerCase();
 
     if(low.startsWith('ref')){
+      const mn=line.match(/^ref\b\s*([^:{]*?)\s*[:{]/i), rname=mn?mn[1]:'';
       const mref=line.match(/ref\b[^:{]*:?\s*(.*)$/i);
-      let body=mref?mref[1].trim():'';
+      // trailing [delete: cascade] etc. are settings, not part of the endpoint
+      const one=(part,where)=>{ part=part.replace(/\s*\[[^\]]*\]\s*$/,'');
+        const mm=part.match(/^\s*(.+?)\s*(\??[<>-]{1,2}\??)\s*(.+?)\s*$/);
+        if(mm) addRef(refEndpoint(mm[1]),refEndpoint(mm[3]),mm[2],rname,where); };
       if(line.includes('{') && !line.split('{')[0].includes(':')){
         let block=line.slice(line.indexOf('{')+1);
-        while(!block.includes('}') && i<n){ block+=' '+lines[i]; i++; }
+        while(!block.includes('}') && i<n){ block+='\n'+lines[i]; i++; }
         block=block.split('}')[0];
-        block.split(/[\n,]/).forEach(part=>{
-          const mm=part.match(/\s*(.+?)\s*(\??[<>-]{1,2}\??)\s*(.+?)\s*$/);
-          if(mm){ const [a,ac]=refEndpoint(mm[1]); const [b,bc]=refEndpoint(mm[3]); addRef(a,ac,b,bc,mm[2]); }
-        });
+        // one ref per line or comma-separated - but not the commas inside Table.(a, b)
+        block.split(/\n|,(?![^(]*\))/).forEach(p=>{ if(p.trim()) one(p,null); });
         continue;
       }
-      const mm=body.match(/(.+?)\s*(\??[<>-]{1,2}\??)\s*(.+?)\s*$/);
-      if(mm){ const [a,ac]=refEndpoint(mm[1]); const [b,bc]=refEndpoint(mm[3]); addRef(a,ac,b,bc,mm[2]); }
+      one(mref?mref[1]:'', parseWhere(cmt[i-1]));
       continue;
     }
 
@@ -186,7 +208,7 @@ function parseDBML(text){
       let decl=mt[1].replace(/\s+as\s+\w+\s*$/i,'');
       const tname=shortName(decl);
       if(!line.includes('{')){ while(i<n && !lines[i].includes('{')) i++; if(i<n) i++; }
-      const cols=[]; let depth=1;
+      const cols=[], ixPk=new Set(); let depth=1;
       while(i<n && depth>0){
         const raw=lines[i]; i++;
         // braces inside `...` / '...' (regex quantifiers, defaults) don't nest
@@ -195,18 +217,23 @@ function parseDBML(text){
         depth+=(bare.split('{').length-1)-(bare.split('}').length-1);
         if(depth<=0) break;                        // table closed
         const cl=raw.trim();
+        // composite primary key:  indexes { (a, b) [pk] }
+        const ix=inner&&cl.match(/^\(([^)]*)\)\s*\[([^\]]*)\]/);
+        if(ix&&/\b(pk|primary key)\b/i.test(ix[2])) ix[1].split(',').forEach(c=>ixPk.add(unquote(c)));
         if(inner||!cl||cl.startsWith('(')) continue;
         const cll=cl.toLowerCase();
         if(cll.startsWith('indexes')||cll.startsWith('note')) continue;
-        let cm=cl.match(/^("[^"]+"|`[^`]+`|[^\s\[]+)\s+([^\[\s]+(?:\([^)]*\))?)\s*(\[.*\])?/);
+        // a type with spaces comes quoted: created_at "timestamp with time zone"
+        let cm=cl.match(/^("[^"]+"|`[^`]+`|[^\s\[]+)\s+("[^"]+"|[^\[\s]+(?:\([^)]*\))?)\s*(\[.*\])?/);
         let cname,ctype,settings;
-        if(cm){ cname=unquote(cm[1]); ctype=cm[2]; settings=cm[3]||''; }
+        if(cm){ cname=unquote(cm[1]); ctype=unquote(cm[2]); settings=cm[3]||''; }
         else{ cm=cl.match(/^("[^"]+"|`[^`]+`|\S+)\s*(\[.*\])?/); if(!cm) continue; cname=unquote(cm[1]); ctype=''; settings=cm[2]||''; }
         const pk=/\b(pk|primary key)\b/i.test(settings);
         const im=settings.match(/ref:\s*(\??[<>-]{1,2}\??)\s*([^\],]+)/i);
-        if(im){ const [b,bc]=refEndpoint(im[2]); addRef(tname,cname,b,bc,im[1]); }
+        if(im) addRef([tname,cname,[cname]],refEndpoint(im[2]),im[1],'',null);
         cols.push({col:cname,type:ctype,pk});
       }
+      cols.forEach(c=>{ if(ixPk.has(c.col)) c.pk=true; });
       if(!(tname in tables)) order.push(tname);
       tables[tname]=cols;
       continue;
